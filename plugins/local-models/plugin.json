@@ -1,5 +1,6 @@
 {
   "id": "local-models",
+  "order": 50,
   "name": "Local Models",
   "tab": { "label": "Local Models", "icon": "🤖" },
   "frontend": { "panel": "panel.html", "script": "panel.js", "style": "panel.css" },

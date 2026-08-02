@@ -27,6 +27,10 @@ def parse_manifest(path):
     fm.setdefault("tab", {})
     fm.setdefault("frontend", {})
     fm.setdefault("backend", None)
+    try:
+        fm["order"] = int(fm.get("order", 100))   # optional tab ordering; lower sorts further left
+    except (TypeError, ValueError):
+        fm["order"] = 100
     return fm
 
 
@@ -43,4 +47,4 @@ def discover_plugins(*dirs):
             if pj and pj["id"] not in seen:
                 seen.add(pj["id"])
                 out.append(pj)
-    return sorted(out, key=lambda p: p["id"])
+    return sorted(out, key=lambda p: (p.get("order", 100), p["id"]))

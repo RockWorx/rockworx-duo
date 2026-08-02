@@ -1,5 +1,6 @@
 {
   "id": "airfoil-lab",
+  "order": 11,
   "name": "Airfoil Lab",
   "tab": { "label": "Airfoil Lab", "icon": "✈" },
   "frontend": { "panel": "panel.html", "script": "panel.js", "style": "panel.css" },
