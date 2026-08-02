@@ -2,7 +2,7 @@
 
 *An open-source developer tool from [RockWorx](https://github.com/RockWorx) -- offered to the community in the spirit of power-factor Human-AI collaboration.*
 
-[![CI](https://github.com/RockWorx/rockworx-duo/actions/workflows/ci.yml/badge.svg)](https://github.com/RockWorx/rockworx-duo/actions/workflows/ci.yml)
+[![CI](https://github.com/RockWorx/rockworx-duo/actions/workflows/main.yml/badge.svg)](https://github.com/RockWorx/rockworx-duo/actions/workflows/main.yml)
 
 A local, browser-based cockpit for driving multiple AI coding-agent CLIs side by side. It runs a
 small HTTP server on your own machine that spawns real terminals (via a PTY) and fans them out to a

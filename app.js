@@ -580,10 +580,15 @@ function fitAllTerminals() {
 // --- New-tab workspace picker ---------------------------------------------
 
 function showNewTabMenu(agent, anchor) {
+  // Toggle: a second click on the same "+" (while its menu is open) closes it -- standard dropdown UX.
+  const open = document.getElementById("tab-menu");
+  const owner = "newtab:" + agent;
   dismissTabMenu();
+  if (open && open.dataset.owner === owner) return;
   const menu = document.createElement("div");
   menu.className = "tab-menu";
   menu.id = "tab-menu";
+  menu.dataset.owner = owner;
 
   const title = document.createElement("div");
   title.className = "tab-menu-title";
