@@ -5,12 +5,15 @@ terminals and read/write files in the workspace. Treat it like any local dev ser
 
 ## What the core enforces
 
+- **Local bind only.** The HTTP + WebSocket servers bind to `127.0.0.1`, never a public interface.
 - **Session token.** Every request must carry the token printed at startup. Requests without it are
   rejected.
-- **Origin / Host allow-list.** Requests from unexpected Origins or Hosts are rejected (defense against
-  a random web page poking `localhost`).
-- **Path jail.** File and plugin-asset serving is confined to the workspace / plugin directory;
-  `../` escapes, drive switches, and hidden files are blocked.
+- **Origin / Host allow-list.** Requests from unexpected Origins or Hosts are rejected -- defense against
+  a random web page poking `localhost` (i.e. session hijacking from another browser tab).
+- **Exclusive port bind.** The port is claimed outright (no address reuse), so another process can't
+  bind the same port and shadow your session.
+- **Path jail.** File, transcript, and plugin-asset serving is confined to the workspace / plugin
+  directory; `../` escapes, drive switches, and hidden files are blocked.
 
 ## Plugins are trusted local code
 
@@ -23,5 +26,6 @@ auto-update; you add plugins deliberately by copying a directory in.
 
 ## Reporting
 
-This is early software. If you find a security issue, open an issue describing it (avoid posting a live
-exploit against others).
+This is early software. If you find a security issue, please report it **privately** -- use the repo's
+**Security -> Report a vulnerability** (GitHub security advisories) rather than a public issue. Avoid
+posting a live exploit against others.

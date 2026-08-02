@@ -12,8 +12,11 @@ with file explorer, git, and project panels alongside. Domain features are add-o
 > **Cross-platform:** Windows (ConPTY via `pywinpty`) and macOS + Linux (via `ptyprocess`) -- the PTY
 > backend is selected at runtime, and CI runs the real terminal round-trip on all three (see the badge).
 >
-> **Everything runs locally.** The server binds to `127.0.0.1` only and gates every request with a token
-> printed at startup. Nothing is sent anywhere except to the agent CLIs you choose to run.
+> **Everything runs locally -- and hardened even so.** The server binds to `127.0.0.1` only, but because a
+> page in another browser tab can still reach a local server, **every request is gated by a per-session
+> token** (printed at startup) **plus Origin/Host checks** -- so a stray or malicious website can't drive
+> your terminals, and the port is bound exclusively so another process can't hijack it. Nothing is sent
+> anywhere except to the agent CLIs you choose to run. See [Security](#security).
 
 ---
 
@@ -67,10 +70,19 @@ the current directory). See [`docs/CONFIG.md`](docs/CONFIG.md) for all settings.
 
 - **Dual CLI** -- two persistent terminal lanes in the browser; the **broadcast box** sends one prompt to
   both, so you can compare agents side by side.
-- **The `+` in a lane** -- open a new session: choose a provider, a shell, or a working directory. (Click
+- **Tabs own their identity** -- each lane holds multiple tabs, and the toolbar under the tab strip follows
+  the **active tab's** provider: model, effort, resume, and restart all act on that tab. Tabs are labeled
+  `provider:folder` (e.g. `gemini:my-project`), so a Gemini tab opened in the Claude lane is Gemini through
+  and through.
+- **The `+` in a lane** -- a menu led by your **Projects**: hover a project and pick the agent to run it
+  with (Claude / Gemini / Codex), or start an agent / shell in the default folder, or a custom path. (Click
   `+` again to close the menu.)
+- **duo_inbox** -- the **envelope** on a tab sends a short message to any other tab (in this or another
+  browser window); the **inbox** shows messages for the active tab and stages a chosen one at its prompt for
+  you to send. Messages ride your browser's local storage -- nothing leaves the machine.
 - **Projects** -- file explorer, git panel, and a side-by-side git diff.
-- Scrollback search, named layouts, transcript export, and screenshots.
+- **Working aids** -- scrollback search, named layouts, screenshots, and **Transcript**, which saves the
+  terminal's text into the active tab's project directory (with a browser-download fallback).
 
 ## Local models (Ollama / LM Studio)
 
@@ -106,10 +118,20 @@ install only what you trust (see [`docs/SECURITY.md`](docs/SECURITY.md)).
 
 ## Security
 
-RockWorx Duo is a local developer tool: `127.0.0.1`-only, token-gated, with a path jail on file and
-plugin-asset serving. Plugins are trusted, in-process local code (no sandbox, like editor extensions) --
-install only what you trust. Full details and how to report a vulnerability privately:
-[`docs/SECURITY.md`](docs/SECURITY.md).
+RockWorx Duo runs entirely on your machine -- but "local" is not the same as "unprotected," and it is built
+that way on purpose:
+
+- **`127.0.0.1`-only bind** -- the server never listens on a public interface.
+- **Per-session token on every request** -- printed at startup and required by every API and WebSocket
+  call, so another program on your machine can't quietly drive your terminals.
+- **Origin / Host validation (anti-hijacking)** -- a webpage you open in another tab *can* fire requests at
+  `localhost`; those are rejected, so a malicious site can't reach your session.
+- **Exclusive port bind** -- the port is claimed outright so another process can't share or hijack it.
+- **Path jail** -- file, transcript, and plugin-asset access is confined under your home directory; `..`
+  escapes are refused.
+
+Plugins are trusted, in-process local code (no sandbox, like editor extensions) -- install only what you
+trust. Full details and how to report a vulnerability privately: [`docs/SECURITY.md`](docs/SECURITY.md).
 
 ## Feedback & contributing
 
