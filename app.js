@@ -275,9 +275,11 @@ function addSessionTab(agent, desc) {
   const stateDot = document.createElement("span");
   stateDot.className = "tab-state";
   tabEl.appendChild(stateDot);
+  const provider = desc.profile || agent;
+  const base = (desc.cwd || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || desc.label;
   const labelSpan = document.createElement("span");
   labelSpan.className = "tab-label";
-  labelSpan.innerText = desc.label;
+  labelSpan.innerText = `${provider}:${base}`;   // every tab is provider-prefixed + self-describing (lanes are generic)
   const closeSpan = document.createElement("span");
   closeSpan.className = "tab-close";
   closeSpan.innerText = "×";
@@ -306,7 +308,7 @@ function addSessionTab(agent, desc) {
   try { term.loadAddon(new WebLinksAddon.WebLinksAddon()); } catch (_) {}
 
   const state = {
-    id: desc.id, agent, provider: desc.profile || agent, label: desc.label, cwd: desc.cwd,
+    id: desc.id, agent, provider, label: base, cwd: desc.cwd,
     term, fit, ws: null, hostEl: host, tabEl, stateDotEl: stateDot,
     status: "connecting", closed: false, retryTimer: null,
     lastOutputAt: 0, lastInputAt: 0, busySince: 0, working: false,

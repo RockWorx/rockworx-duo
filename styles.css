@@ -1005,10 +1005,18 @@ body {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  scrollbar-width: none;
   flex: 1;
   min-width: 0;
 }
+/* Visible thin scroll indicator when tabs overflow (Chromium/Edge via ::-webkit). Do NOT set
+   scrollbar-width here -- on Edge/Chromium 121+ it DISABLES these ::-webkit rules (the
+   .xterm-viewport lesson). Firefox falls back to its own thin bar, which is fine. */
+.term-tabs::-webkit-scrollbar { height: 6px; }
+.term-tabs::-webkit-scrollbar-track { background: transparent; }
+.term-tabs::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+.term-tabs::-webkit-scrollbar-thumb:hover { background: #64748b; }
+/* Keep tabs bounded so many tabs don't shove the + off-screen; long labels ellipsize. */
+.term-tab .tab-label { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .term-tab {
   display: flex;
