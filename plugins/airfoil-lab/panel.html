@@ -10,7 +10,7 @@
     </ul>
     <div class="af-info-h">How to use it</div>
     <ul>
-      <li>enter any <b>NACA</b> (e.g. naca2412) or <b>UIUC</b> (e.g. s1223) section</li>
+      <li>pick from <b>2,000+ airfoils</b> (start typing to search) or type any <b>naca####</b></li>
       <li>set the Reynolds number and the &alpha; sweep, then Compute</li>
       <li>drag the <b>&alpha; slider</b> to move the operating point in real time</li>
     </ul>
@@ -20,7 +20,8 @@
   </aside>
   <div class="af-main">
   <div class="af-controls">
-    <label>Airfoil <input id="af-name" type="text" value="naca2412" autocomplete="off" spellcheck="false"></label>
+    <label>Airfoil <input id="af-name" type="text" value="naca2412" list="af-airfoils" autocomplete="off" spellcheck="false" placeholder="search 2,000+ or type naca####"></label>
+    <datalist id="af-airfoils"></datalist>
     <label>Re <input id="af-re" type="text" value="1e6" autocomplete="off" spellcheck="false"></label>
     <label>&alpha;
       <input id="af-amin" type="number" value="-5" step="1"> to

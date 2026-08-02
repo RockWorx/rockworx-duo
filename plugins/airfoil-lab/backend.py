@@ -56,7 +56,8 @@ def polar(params):
     if _IMPORT_ERROR is not None:
         return {"error": "NeuralFoil is not installed in this environment", **_status()}
 
-    name = str(_one(params, "airfoil", "naca2412")).strip().lower().replace(" ", "")
+    raw = str(_one(params, "airfoil", "naca2412")).strip().replace(" ", "")
+    name = raw.lower() if raw[:4].lower() == "naca" else raw   # NACA is case-insensitive; keep UIUC case
     if not name:
         return {"error": "an airfoil name is required (e.g. naca2412)"}
 

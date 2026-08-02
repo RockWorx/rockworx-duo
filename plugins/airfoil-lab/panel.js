@@ -5,6 +5,7 @@ let AF_WIRED = false;
 let AF_RAN = false;
 let AF_DATA = null;   // last polar response, kept so the alpha slider can interpolate without re-solving
 let AF_RAF = 0;       // requestAnimationFrame throttle for smooth slider dragging
+let AF_AIRFOILS_LOADED = false;   // the searchable airfoil-name list (a static file pulled down once)
 
 // --- tiny number formatter for axis ticks -----------------------------------
 function afFmt(v) {
@@ -249,6 +250,30 @@ async function afRun() {
   afDraw(d, sl ? parseFloat(sl.value) : (d.best_ld ? d.best_ld.alpha : 0));
 }
 
+// Populate the searchable airfoil list from a static file shipped in the repo (no dependency needed to
+// browse -- only computing a polar needs NeuralFoil). Pulled down once and cached in the datalist.
+async function afLoadAirfoils() {
+  if (AF_AIRFOILS_LOADED) return;
+  const dl = document.getElementById("af-airfoils");
+  if (!dl) return;
+  try {
+    const res = await fetch("/plugin/airfoil-lab/airfoils.json");
+    if (!res.ok) return;
+    const data = await res.json();
+    const names = (data.popular || []).concat(data.all || []);
+    const seen = {}, frag = document.createDocumentFragment();
+    for (const n of names) {
+      if (seen[n]) continue;
+      seen[n] = 1;
+      const o = document.createElement("option");
+      o.value = n;
+      frag.appendChild(o);
+    }
+    dl.appendChild(frag);
+    AF_AIRFOILS_LOADED = true;
+  } catch (e) { /* the input still works as free text */ }
+}
+
 async function afInit() {
   let st;
   try { st = await Harness.api("/api/plugin/airfoil-lab/status"); }
@@ -258,6 +283,7 @@ async function afInit() {
   const body = document.getElementById("af-body");
   if (install) install.style.display = "none";
   if (body) body.style.display = "block";
+  afLoadAirfoils();
   if (!AF_RAN) { AF_RAN = true; setTimeout(afRun, 40); }   // populate with the default airfoil once
 }
 

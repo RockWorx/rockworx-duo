@@ -82,7 +82,8 @@ def analyze(params):
     twist = _num(params, "twist", 0.0)               # tip twist (washout is negative) [deg]
     alpha = _num(params, "alpha", 5.0)
     V = max(1.0, _num(params, "velocity", 50.0))
-    airfoil = str(_one(params, "airfoil", "naca2412")).strip().lower().replace(" ", "")
+    _rawaf = str(_one(params, "airfoil", "naca2412")).strip().replace(" ", "")
+    airfoil = _rawaf.lower() if _rawaf[:4].lower() == "naca" else _rawaf   # NACA case-insensitive; keep UIUC case
 
     tip = taper * root
     # place the tip so the QUARTER-CHORD line has the requested sweep; z from dihedral.
