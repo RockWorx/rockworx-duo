@@ -1,4 +1,25 @@
 <div class="au-wrap">
+  <aside class="au-info">
+    <h4>Atmosphere &amp; Units</h4>
+    <p>The <b>standard atmosphere</b> and the airspeeds you fly by &mdash; the reference conditions behind every other aero calculation.</p>
+    <div class="au-info-h">What it shows</div>
+    <ul>
+      <li>ISA T, p, density, speed of sound, viscosity, and the &theta;/&delta;/&sigma; ratios at any altitude</li>
+      <li>Mach &harr; TAS &harr; EAS &harr; CAS conversions</li>
+      <li>Reynolds number for a chosen length</li>
+      <li>ISA-profile plots (T and ratios vs altitude)</li>
+    </ul>
+    <div class="au-info-h">How to use it</div>
+    <ul>
+      <li>enter an altitude in m / ft / km / FL</li>
+      <li>add a speed (Mach / TAS / EAS / CAS) to convert it</li>
+      <li>add a length to get the Reynolds number</li>
+    </ul>
+    <div class="au-info-h">Method</div>
+    <p>ISA-1976 (geometric altitude &rarr; geopotential); compressible subsonic airspeed relations; Sutherland's law for viscosity. <b>Pure Python &mdash; nothing to install.</b></p>
+    <p class="au-tip">Try it: FL350 at Mach 0.80 &rarr; ~461 KTAS but only ~272 KCAS &mdash; that gap is why jets fly "by CAS."</p>
+  </aside>
+  <div class="au-main">
   <div class="au-controls">
     <label>Altitude
       <input id="au-alt" type="text" value="0" autocomplete="off" spellcheck="false">
@@ -33,5 +54,6 @@
     compressible <b>subsonic</b> (Mach &lt; 1) on a standard day: TAS &rarr; EAS via &radic;&sigma;, CAS via
     the impact-pressure relation referenced to sea level. Viscosity via Sutherland's law. Pure Python --
     no external dependencies.
+  </div>
   </div>
 </div>

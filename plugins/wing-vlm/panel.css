@@ -1,8 +1,25 @@
 /* Wing / VLM panel -- planform + lift-distribution canvases and result tables. */
 .wv-wrap {
-  width: 100%; max-width: 1100px; margin: 0 auto;
-  display: flex; flex-direction: column; min-height: 0; gap: 12px;
-  padding: 10px 6px 6px; box-sizing: border-box; overflow-y: auto;
+  width: 100%; max-width: 1360px; margin: 0 auto;
+  display: flex; flex-direction: row; align-items: flex-start; gap: 16px;
+  min-height: 0; padding: 10px 6px 6px; box-sizing: border-box; overflow-y: auto;
+}
+.wv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.wv-info {
+  flex: 0 0 268px; position: sticky; top: 0;
+  background: #0b1120; border: 1px solid #22314d; border-radius: 8px; padding: 14px 16px;
+  font-size: 12px; color: #94a3b8; line-height: 1.5;
+}
+.wv-info h4 { margin: 0 0 8px; font-size: 14px; color: #e2e8f0; }
+.wv-info p { margin: 0 0 10px; }
+.wv-info b { color: #cbd5e1; }
+.wv-info-h { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #7dd3fc; margin: 12px 0 4px; }
+.wv-info ul { margin: 0 0 10px; padding-left: 16px; }
+.wv-info li { margin: 2px 0; }
+.wv-info .wv-tip { color: #cbd5e1; background: #17233c; border-radius: 6px; padding: 8px 10px; margin: 12px 0 0; }
+@media (max-width: 820px) {
+  .wv-wrap { flex-direction: column; }
+  .wv-info { flex-basis: auto; width: 100%; position: static; }
 }
 .wv-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .wv-controls label { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #94a3b8; }

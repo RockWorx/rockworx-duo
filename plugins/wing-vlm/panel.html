@@ -1,4 +1,26 @@
 <div class="wv-wrap">
+  <aside class="wv-info">
+    <h4>Wing / VLM</h4>
+    <p>From a 2-D section to a whole <b>3-D wing</b> &mdash; how the planform shapes the lift, the induced drag, and the wing's stability.</p>
+    <div class="wv-info-h">What it shows</div>
+    <ul>
+      <li>spanwise <b>lift distribution</b> vs the ideal elliptical</li>
+      <li>C<sub>L</sub>, induced C<sub>Di</sub>, and <b>span efficiency</b> e</li>
+      <li>stability derivatives, the <b>neutral point</b>, and static margin</li>
+      <li>an interactive <b>3-D wing</b> coloured by local lift</li>
+    </ul>
+    <div class="wv-info-h">How to use it</div>
+    <ul>
+      <li>set the planform: span, chord, taper, sweep, dihedral, twist</li>
+      <li>pick an airfoil and angle of attack</li>
+      <li>enter a CG (%MAC) to get the static margin</li>
+      <li>drag the 3-D wing to orbit, scroll to zoom</li>
+    </ul>
+    <div class="wv-info-h">Method</div>
+    <p><b>Vortex-lattice</b> (AeroSandbox), inviscid &mdash; it captures lift, induced drag, and stability, not profile drag. Pair with <b>Airfoil Lab</b> for the section's viscous drag.</p>
+    <p class="wv-tip">Try it: compare taper 1.0 (rectangular) vs 0.4 and watch e and the loading change; then move the CG aft and watch the static margin shrink.</p>
+  </aside>
+  <div class="wv-main">
   <div class="wv-controls">
     <label>Span b <input id="wv-span" type="text" value="8" autocomplete="off"></label>
     <label>Root chord <input id="wv-root" type="text" value="1.0" autocomplete="off"></label>
@@ -34,5 +56,6 @@
       efficiency e = C<sub>L</sub>&sup2; / (&pi; &middot; AR &middot; C<sub>Di</sub>); neutral point and
       static margin are for the wing alone (SM &gt; 0 = statically stable).
     </div>
+  </div>
   </div>
 </div>

@@ -1,4 +1,24 @@
 <div class="af-wrap">
+  <aside class="af-info">
+    <h4>Airfoil Lab</h4>
+    <p>How a 2-D wing <b>section</b> behaves &mdash; the lift, drag, and pitching moment it makes as the angle of attack changes.</p>
+    <div class="af-info-h">What it shows</div>
+    <ul>
+      <li>C<sub>l</sub>, C<sub>d</sub>, C<sub>m</sub> vs &alpha;, the drag polar, and L/D</li>
+      <li>the section pitched to the live &alpha;</li>
+      <li>best L/D, C<sub>l,max</sub>, and the low-drag "bucket"</li>
+    </ul>
+    <div class="af-info-h">How to use it</div>
+    <ul>
+      <li>enter any <b>NACA</b> (e.g. naca2412) or <b>UIUC</b> (e.g. s1223) section</li>
+      <li>set the Reynolds number and the &alpha; sweep, then Compute</li>
+      <li>drag the <b>&alpha; slider</b> to move the operating point in real time</li>
+    </ul>
+    <div class="af-info-h">Method</div>
+    <p>Polars come from <b>NeuralFoil</b>, a machine-learning surrogate of XFOIL &mdash; viscous, low-speed (incompressible), Reynolds-based. Results are engineering estimates and lose accuracy past stall.</p>
+    <p class="af-tip">Try it: sweep &alpha; past ~12&deg; and watch drag climb as lift rolls over into stall.</p>
+  </aside>
+  <div class="af-main">
   <div class="af-controls">
     <label>Airfoil <input id="af-name" type="text" value="naca2412" autocomplete="off" spellcheck="false"></label>
     <label>Re <input id="af-re" type="text" value="1e6" autocomplete="off" spellcheck="false"></label>
@@ -36,5 +56,6 @@
       <b>incompressible</b>). Reynolds is chord-based; results are engineering estimates for teaching and
       lose accuracy past stall. Compressibility (Mach) is a planned enhancement.
     </div>
+  </div>
   </div>
 </div>
