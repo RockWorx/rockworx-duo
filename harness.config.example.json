@@ -1,0 +1,7 @@
+{
+  "agents": {
+    "claude": { "label": "Claude Code", "cmd": "claude" },
+    "gemini": { "label": "Google Gemini", "cmd": "gemini" },
+    "codex":  { "label": "OpenAI Codex", "cmd": "codex" }
+  }
+}
