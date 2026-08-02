@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & ideas (Discussions)
+    url: https://github.com/RockWorx/rockworx-duo/discussions
+    about: Ask a question, share a plugin you built, or float an idea.
+  - name: Report a security issue (private)
+    url: https://github.com/RockWorx/rockworx-duo/security/advisories/new
+    about: Report a vulnerability privately -- please do NOT open a public issue.

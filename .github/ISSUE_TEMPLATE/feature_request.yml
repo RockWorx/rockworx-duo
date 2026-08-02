@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an idea or improvement for RockWorx Duo
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution or idea
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Core (terminals / files / git / projects)
+        - Plugins / plugin API
+        - Provider presets (Claude / Gemini / Codex / local)
+        - Cross-platform (Windows / macOS / Linux)
+        - Docs
+        - Other

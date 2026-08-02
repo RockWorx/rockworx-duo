@@ -43,6 +43,15 @@ A plugin is a directory under `plugins/` with a `plugin.json` manifest; it may a
 as a copy-paste template. Plugins run in-process as **trusted local code** -- install only what you
 trust (see `docs/SECURITY.md`).
 
+## Feedback & contributing
+
+RockWorx Duo is built in the open and shaped by the people who use it. If it's useful, **star the repo**;
+if it's not quite right, tell us:
+- **Bug or idea?** Open an [issue](../../issues/new/choose).
+- **Question, or built a plugin?** Start a [discussion](../../discussions).
+- **Want to contribute?** See [`CONTRIBUTING.md`](CONTRIBUTING.md). Security reports go
+  [privately](../../security/advisories/new), not to public issues.
+
 ## License
 
 MIT -- see `LICENSE`.

@@ -1,0 +1,34 @@
+name: Bug report
+description: Something in RockWorx Duo isn't working as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve RockWorx Duo. Please include enough detail for us to reproduce it.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+  - type: input
+    id: env
+    attributes:
+      label: OS + Python version
+      placeholder: "Windows 11 / Python 3.12  (or macOS 14 / Python 3.11)"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server console output (if any)
+      render: shell
