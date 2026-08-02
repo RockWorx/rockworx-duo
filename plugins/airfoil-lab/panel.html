@@ -17,6 +17,12 @@
   <div id="af-install" class="af-install" style="display:none;"></div>
 
   <div id="af-body" class="af-body" style="display:none;">
+    <div id="af-slider-row" class="af-slider-row" style="display:none;">
+      <label>Drag &alpha;
+        <input id="af-alpha-slider" type="range" min="-5" max="15" step="0.1" value="0">
+      </label>
+      <span id="af-alpha-readout" class="af-readout"></span>
+    </div>
     <div class="af-grid">
       <div class="af-card"><div class="af-title">Airfoil</div><canvas id="af-shape"></canvas></div>
       <div class="af-card"><div class="af-title">C<sub>L</sub> vs &alpha;</div><canvas id="af-cl"></canvas></div>

@@ -3,6 +3,8 @@
 
 let AF_WIRED = false;
 let AF_RAN = false;
+let AF_DATA = null;   // last polar response, kept so the alpha slider can interpolate without re-solving
+let AF_RAF = 0;       // requestAnimationFrame throttle for smooth slider dragging
 
 // --- tiny number formatter for axis ticks -----------------------------------
 function afFmt(v) {
@@ -88,20 +90,35 @@ function afLine(canvas, series, opts) {
   g.textAlign = "center"; g.textBaseline = "top"; g.fillText(opts.ylabel || "", 0, 0); g.restore();
 }
 
-// --- airfoil outline (equal aspect) -----------------------------------------
-function afShape(canvas, coords) {
+// --- airfoil outline (equal aspect), rotated to the angle of attack ----------
+function afShape(canvas, coords, alphaDeg) {
   const { g, W, H } = afCanvasSize(canvas);
-  const xs = coords.x, ys = coords.y;
-  if (!xs || !xs.length) return;
+  const cx = coords.x, cy = coords.y;
+  if (!cx || !cx.length) return;
+  const th = -(alphaDeg || 0) * Math.PI / 180;   // rotate about the quarter-chord to show AoA vs the freestream
+  const c = Math.cos(th), s = Math.sin(th), xc = 0.25;
+  const xs = [], ys = [];
+  for (let i = 0; i < cx.length; i++) {
+    xs.push(xc + (cx[i] - xc) * c - cy[i] * s);
+    ys.push((cx[i] - xc) * s + cy[i] * c);
+  }
   const xmin = Math.min(...xs), xmax = Math.max(...xs), ymin = Math.min(...ys), ymax = Math.max(...ys);
   const midX = (xmin + xmax) / 2, midY = (ymin + ymax) / 2;
-  const pad = 16;
+  const pad = 20;
   const spanX = (xmax - xmin) || 1, spanY = (ymax - ymin) || 1;
   const scale = Math.min((W - 2 * pad) / spanX, (H - 2 * pad) / spanY);
   const X = (v) => W / 2 + (v - midX) * scale;
   const Y = (v) => H / 2 - (v - midY) * scale;   // flip: y up in airfoil coords, down on screen
-  g.strokeStyle = "#334155"; g.lineWidth = 1;
-  g.beginPath(); g.moveTo(X(xmin), Y(0)); g.lineTo(X(xmax), Y(0)); g.stroke();   // chord line
+  // freestream reference (horizontal, through the quarter-chord pivot)
+  g.strokeStyle = "#334155"; g.lineWidth = 1; g.setLineDash([4, 4]);
+  g.beginPath(); g.moveTo(X(xmin), Y(0)); g.lineTo(X(xmax), Y(0)); g.stroke(); g.setLineDash([]);
+  // rotated chord line (LE -> TE) so the AoA is visible against the freestream
+  g.strokeStyle = "#475569"; g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(X(xc + (0 - xc) * c), Y((0 - xc) * s));
+  g.lineTo(X(xc + (1 - xc) * c), Y((1 - xc) * s));
+  g.stroke();
+  // airfoil outline
   g.strokeStyle = "#38bdf8"; g.fillStyle = "rgba(56,189,248,0.12)"; g.lineWidth = 2;
   g.beginPath();
   for (let i = 0; i < xs.length; i++) { const px = X(xs[i]), pyy = Y(ys[i]); if (i === 0) g.moveTo(px, pyy); else g.lineTo(px, pyy); }
@@ -146,6 +163,58 @@ function afSummary(d) {
   }
 }
 
+// --- interactive alpha slider: interpolate the fetched sweep, redraw with a live marker ----------
+function afInterpAt(d, a) {
+  const A = d.alpha;
+  let i = 0;
+  while (i < A.length - 1 && A[i + 1] < a) i++;
+  const lo = Math.max(0, Math.min(i, A.length - 2));
+  const denom = A[lo + 1] - A[lo];
+  const t = Math.max(0, Math.min(1, denom ? (a - A[lo]) / denom : 0));
+  const lerp = (arr) => arr[lo] + t * (arr[lo + 1] - arr[lo]);
+  return { cl: lerp(d.CL), cd: lerp(d.CD), cm: lerp(d.CM), ld: lerp(d.LD) };
+}
+
+function afConfigureSlider(d) {
+  const sl = document.getElementById("af-alpha-slider");
+  const row = document.getElementById("af-slider-row");
+  if (!sl) return;
+  sl.min = d.alpha[0];
+  sl.max = d.alpha[d.alpha.length - 1];
+  sl.step = 0.1;
+  let v = d.best_ld ? d.best_ld.alpha : 0;
+  v = Math.max(parseFloat(sl.min), Math.min(parseFloat(sl.max), v));
+  sl.value = v;
+  if (row) row.style.display = "flex";
+}
+
+function afDraw(d, aMark) {
+  const p = afInterpAt(d, aMark);
+  afShape(document.getElementById("af-shape"), d.coords, aMark);
+  afLine(document.getElementById("af-cl"), [{ xs: d.alpha, ys: d.CL, color: "#38bdf8" }],
+    { xlabel: "alpha (deg)", ylabel: "CL", mark: { x: aMark, y: p.cl } });
+  afLine(document.getElementById("af-dp"), [{ xs: d.CD, ys: d.CL, color: "#a78bfa", dots: true }],
+    { xlabel: "CD", ylabel: "CL", mark: { x: p.cd, y: p.cl } });
+  afLine(document.getElementById("af-ld"), [{ xs: d.alpha, ys: d.LD, color: "#34d399" }],
+    { xlabel: "alpha (deg)", ylabel: "L/D", mark: { x: aMark, y: p.ld } });
+  afLine(document.getElementById("af-cm"), [{ xs: d.alpha, ys: d.CM, color: "#f59e0b" }],
+    { xlabel: "alpha (deg)", ylabel: "CM", mark: { x: aMark, y: p.cm } });
+  const ro = document.getElementById("af-alpha-readout");
+  if (ro) {
+    ro.textContent = "alpha " + aMark.toFixed(1) + " deg   ->   CL " + p.cl.toFixed(3)
+      + "    CD " + p.cd.toFixed(5) + "    L/D " + p.ld.toFixed(1) + "    CM " + p.cm.toFixed(3);
+  }
+}
+
+function afSliderMove() {
+  if (AF_RAF || !AF_DATA) return;
+  AF_RAF = requestAnimationFrame(() => {
+    AF_RAF = 0;
+    const sl = document.getElementById("af-alpha-slider");
+    if (sl && AF_DATA) afDraw(AF_DATA, parseFloat(sl.value));
+  });
+}
+
 async function afRun() {
   const status = document.getElementById("af-status");
   const val = (id, dflt) => { const el = document.getElementById(id); return (el && String(el.value).trim()) || dflt; };
@@ -173,12 +242,11 @@ async function afRun() {
   const minConf = d.confidence && d.confidence.length ? Math.min.apply(null, d.confidence) : 1;
   if (status) status.textContent = d.airfoil + " · Re " + Number(d.re).toExponential(1)
     + " · " + d.model + " · confidence >= " + Math.round(minConf * 100) + "%";
-  afShape(document.getElementById("af-shape"), d.coords);
-  afLine(document.getElementById("af-cl"), [{ xs: d.alpha, ys: d.CL, color: "#38bdf8" }], { xlabel: "alpha (deg)", ylabel: "CL" });
-  afLine(document.getElementById("af-dp"), [{ xs: d.CD, ys: d.CL, color: "#a78bfa", dots: true }], { xlabel: "CD", ylabel: "CL" });
-  afLine(document.getElementById("af-ld"), [{ xs: d.alpha, ys: d.LD, color: "#34d399" }], { xlabel: "alpha (deg)", ylabel: "L/D", mark: { x: d.best_ld.alpha, y: d.best_ld.ld } });
-  afLine(document.getElementById("af-cm"), [{ xs: d.alpha, ys: d.CM, color: "#f59e0b" }], { xlabel: "alpha (deg)", ylabel: "CM" });
+  AF_DATA = d;
+  afConfigureSlider(d);
   afSummary(d);
+  const sl = document.getElementById("af-alpha-slider");
+  afDraw(d, sl ? parseFloat(sl.value) : (d.best_ld ? d.best_ld.alpha : 0));
 }
 
 async function afInit() {
@@ -202,6 +270,8 @@ Harness.registerPanel("airfoil-lab", {
         const el = document.getElementById(id);
         if (el) el.addEventListener("keydown", (e) => { if (e.key === "Enter") afRun(); });
       });
+      const slider = document.getElementById("af-alpha-slider");
+      if (slider) slider.addEventListener("input", afSliderMove);
       AF_WIRED = true;
     }
     afInit();

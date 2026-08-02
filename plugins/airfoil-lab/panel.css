@@ -31,6 +31,14 @@
   font-family: var(--font-mono, monospace); font-size: 12px; color: #7dd3fc;
 }
 
+.af-slider-row {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: #0b1120; border: 1px solid #22314d; border-radius: 8px; padding: 10px 14px;
+}
+.af-slider-row label { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #cbd5e1; flex: 1 1 300px; }
+#af-alpha-slider { flex: 1; min-width: 160px; accent-color: #f43f5e; cursor: pointer; }
+.af-readout { font-family: var(--font-mono, monospace); font-size: 12px; color: #e2e8f0; white-space: nowrap; }
+
 .af-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
 .af-card {
   background: #0b1120; border: 1px solid #22314d; border-radius: 8px; padding: 10px;
