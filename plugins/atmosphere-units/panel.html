@@ -1,0 +1,37 @@
+<div class="au-wrap">
+  <div class="au-controls">
+    <label>Altitude
+      <input id="au-alt" type="text" value="0" autocomplete="off" spellcheck="false">
+      <select id="au-altunit"><option>m</option><option>ft</option><option>km</option><option>FL</option></select>
+    </label>
+    <label>Speed
+      <input id="au-speed" type="text" placeholder="(optional)" autocomplete="off" spellcheck="false">
+      <select id="au-speedtype">
+        <option value="mach">Mach</option><option value="tas">TAS</option>
+        <option value="eas">EAS</option><option value="cas">CAS</option>
+      </select>
+      <select id="au-spdunit"><option>kt</option><option>m/s</option><option>km/h</option><option>mph</option></select>
+    </label>
+    <label>Length
+      <input id="au-length" type="text" placeholder="(for Re)" autocomplete="off" spellcheck="false">
+      <select id="au-lenunit"><option>m</option><option>ft</option><option>in</option><option>cm</option></select>
+    </label>
+    <button id="au-run" type="button">Compute</button>
+    <span id="au-status" class="au-status"></span>
+  </div>
+
+  <div class="au-grid">
+    <div class="au-card"><div class="au-title">ISA atmosphere</div><div id="au-isa" class="au-table"></div></div>
+    <div class="au-card"><div class="au-title">Airspeeds</div><div id="au-speeds" class="au-table"></div></div>
+    <div class="au-card"><div class="au-title">Reynolds number</div><div id="au-re" class="au-table"></div></div>
+    <div class="au-card"><div class="au-title">Temperature vs altitude</div><canvas id="au-plot-t"></canvas></div>
+    <div class="au-card"><div class="au-title">Ratios (&theta; &delta; &sigma;) vs altitude</div><canvas id="au-plot-r"></canvas></div>
+  </div>
+
+  <div class="au-note">
+    <b>ISA-1976.</b> Altitude is geometric (converted to geopotential internally). Airspeed relations are
+    compressible <b>subsonic</b> (Mach &lt; 1) on a standard day: TAS &rarr; EAS via &radic;&sigma;, CAS via
+    the impact-pressure relation referenced to sea level. Viscosity via Sutherland's law. Pure Python --
+    no external dependencies.
+  </div>
+</div>

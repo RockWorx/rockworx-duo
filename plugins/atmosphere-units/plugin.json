@@ -1,0 +1,7 @@
+{
+  "id": "atmosphere-units",
+  "name": "Atmosphere & Units",
+  "tab": { "label": "Atmosphere & Units", "icon": "🌡" },
+  "frontend": { "panel": "panel.html", "script": "panel.js", "style": "panel.css" },
+  "backend": "backend.py"
+}

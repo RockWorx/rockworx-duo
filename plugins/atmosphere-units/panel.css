@@ -1,0 +1,32 @@
+/* Atmosphere & Units panel -- controls + a grid of result tables and ISA-profile plots. */
+.au-wrap {
+  width: 100%; max-width: 1100px; margin: 0 auto;
+  display: flex; flex-direction: column; min-height: 0; gap: 12px;
+  padding: 10px 6px 6px; box-sizing: border-box; overflow-y: auto;
+}
+.au-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.au-controls label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #94a3b8; }
+.au-controls input[type=text] { width: 84px; }
+.au-controls input, .au-controls select {
+  padding: 6px 8px; background: #0b1120; border: 1px solid #22314d; border-radius: 6px; color: #e2e8f0;
+}
+#au-run { padding: 8px 16px; border-radius: 6px; cursor: pointer; background: #0284c7; color: #fff; border: none; font-weight: 600; }
+#au-run:hover { background: #0ea5e9; }
+.au-status { font-size: 12px; opacity: 0.85; font-family: var(--font-mono, monospace); }
+
+.au-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.au-card {
+  background: #0b1120; border: 1px solid #22314d; border-radius: 8px; padding: 10px;
+  display: flex; flex-direction: column; min-width: 0;
+}
+.au-title { font-size: 12px; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; }
+.au-card canvas { width: 100%; height: 200px; display: block; }
+
+.au-table { font-family: var(--font-mono, monospace); font-size: 12px; }
+.au-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid #131e33; }
+.au-row:last-child { border-bottom: none; }
+.au-k { color: #94a3b8; }
+.au-v { color: #e2e8f0; text-align: right; }
+
+.au-note { font-size: 11px; color: #94a3b8; line-height: 1.5; border-top: 1px solid #22314d; padding-top: 10px; }
+.au-note b { color: #cbd5e1; }
