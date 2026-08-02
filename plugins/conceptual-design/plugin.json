@@ -1,0 +1,8 @@
+{
+  "id": "conceptual-design",
+  "order": 13,
+  "name": "Conceptual Design",
+  "tab": { "label": "Conceptual Design", "icon": "📐" },
+  "frontend": { "panel": "panel.html", "script": "panel.js", "style": "panel.css" },
+  "backend": "backend.py"
+}
