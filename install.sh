@@ -26,6 +26,15 @@ fi
 .venv/bin/python -m pip install --upgrade pip >/dev/null 2>&1
 .venv/bin/python -m pip install -r requirements.txt || { echo "Dependency install failed -- see above."; exit 1; }
 
+# --- create a Desktop shortcut (macOS .command / Linux .desktop) ---
+if [ "$(uname)" = "Darwin" ] && [ -d "$HOME/Desktop" ]; then
+  SC="$HOME/Desktop/RockWorx Duo.command"
+  printf '#!/bin/bash\ncd "%s" && ./launch.sh\n' "$(pwd)" > "$SC" && chmod +x "$SC" && echo "Desktop shortcut created: $SC"
+elif [ -d "$HOME/Desktop" ]; then
+  SC="$HOME/Desktop/rockworx-duo.desktop"
+  printf '[Desktop Entry]\nType=Application\nName=RockWorx Duo\nExec=%s/launch.sh\nPath=%s\nTerminal=true\n' "$(pwd)" "$(pwd)" > "$SC" && chmod +x "$SC" && echo "Desktop shortcut created: $SC"
+fi
+
 echo ""
 echo "=== Starting RockWorx Duo -- your browser will open automatically. ==="
 echo "Keep this terminal open while you use it; press Ctrl-C to stop."

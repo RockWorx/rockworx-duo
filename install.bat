@@ -42,6 +42,8 @@ echo Installing dependencies...
 ".venv\Scripts\python.exe" -m pip install --upgrade pip >nul
 ".venv\Scripts\python.exe" -m pip install -r requirements.txt || ( echo Dependency install failed -- see above. & pause & exit /b 1 )
 
+echo Creating a Desktop shortcut...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$w=New-Object -ComObject WScript.Shell; $l=$w.CreateShortcut([Environment]::GetFolderPath('Desktop')+'\RockWorx Duo.lnk'); $l.TargetPath='%~dp0launch.bat'; $l.WorkingDirectory='%~dp0'; if (Test-Path '%~dp0favicon.ico'){$l.IconLocation='%~dp0favicon.ico'}; $l.Save()" 2>nul && echo   Shortcut "RockWorx Duo" added to your Desktop.
 echo.
 echo ============================================
 echo   Starting RockWorx Duo -- your browser will open automatically.

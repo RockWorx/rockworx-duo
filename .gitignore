@@ -8,3 +8,6 @@ _scrollback/
 *.log
 .DS_Store
 .harness_state.json
+
+# user-created projects (runtime; never shipped)
+projects/
