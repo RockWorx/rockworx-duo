@@ -1138,6 +1138,23 @@ body {
   color: var(--gemini-color);
 }
 
+/* + menu: a project row flies out a provider submenu on hover (or click, for touch); pick the agent
+   CLI and the tab opens in that project running that provider's current default model. */
+.tab-menu-item.has-flyout { display: flex; align-items: center; justify-content: space-between; position: relative; }
+.tab-menu-item.has-flyout .flyout-caret { opacity: 0.55; margin-left: 10px; font-size: 11px; }
+.tab-submenu {
+  position: absolute;
+  top: -6px;
+  display: none;
+  z-index: 501;
+  min-width: 170px;
+  background: #0B0F19;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
 /* ===========================================================================
    v3.2 — duo broadcast, state signaling, layouts, genome strip
    =========================================================================== */

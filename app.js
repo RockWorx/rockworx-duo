@@ -578,35 +578,132 @@ function fitAllTerminals() {
 
 // --- New-tab workspace picker ---------------------------------------------
 
-function showNewTabMenu(agent, anchor) {
+async function showNewTabMenu(agent, anchor) {
   // Toggle: a second click on the same "+" (while its menu is open) closes it -- standard dropdown UX.
   const open = document.getElementById("tab-menu");
   const owner = "newtab:" + agent;
   dismissTabMenu();
   if (open && open.dataset.owner === owner) return;
+
+  // Fetch the project list up front so PROJECT can LEAD the menu (a local call, ~instant); fall back
+  // to the cached list. Bail if another menu opened while we awaited (avoids a double-menu race).
+  let projects = PROJECTS;
+  try {
+    const res = await apiFetch("/api/projects");
+    const data = await res.json();
+    projects = data.projects || projects;
+  } catch (_) { /* cached fallback */ }
+  if (document.getElementById("tab-menu")) return;
+
   const menu = document.createElement("div");
   menu.className = "tab-menu";
   menu.id = "tab-menu";
   menu.dataset.owner = owner;
 
-  const title = document.createElement("div");
-  title.className = "tab-menu-title";
-  title.innerText = `New ${agent} session in…`;
-  menu.appendChild(title);
+  const mkTitle = (text) => {
+    const t = document.createElement("div");
+    t.className = "tab-menu-title";
+    t.innerText = text;
+    menu.appendChild(t);
+  };
+  const openTab = async (cwd, profile) => {
+    dismissTabMenu();
+    const desc = await createSession(agent, cwd, true, profile);
+    if (desc) { addSessionTab(agent, desc); activateTab(agent, desc.id); }
+  };
 
-  for (const root of CONFIG.roots) {
-    const item = document.createElement("div");
-    item.className = "tab-menu-item";
-    item.innerText = root.label;
-    item.title = root.path;
-    item.addEventListener("click", async () => {
-      dismissTabMenu();
-      const desc = await createSession(agent, root.path);
-      if (desc) { addSessionTab(agent, desc); activateTab(agent, desc.id); }
-    });
-    menu.appendChild(item);
+  const presets = CONFIG.agentPresets || [];
+  const profiles = CONFIG.shellProfiles || [];
+
+  // 1) PROJECT (top). Each project rows out a provider flyout on hover (or click, for touch); pick an
+  //    agent to open that project running it (with that provider's current default model). The chosen
+  //    provider decides the tab -- there is no lane-default guess.
+  if (projects.length) {
+    mkTitle("Project");
+    for (const pj of projects) {
+      const item = document.createElement("div");
+      item.className = "tab-menu-item has-flyout";
+      item.title = "Open " + (pj.name || pj.id) + " -- pick an agent";
+      const label = document.createElement("span");
+      label.innerText = pj.name || pj.id;
+      item.appendChild(label);
+      const caret = document.createElement("span");
+      caret.className = "flyout-caret";
+      caret.innerText = "▸";
+      item.appendChild(caret);
+
+      if (presets.length) {
+        const sub = document.createElement("div");
+        sub.className = "tab-submenu";
+        for (const preset of presets) {
+          const sItem = document.createElement("div");
+          sItem.className = "tab-menu-item";
+          sItem.innerText = preset.label;
+          sItem.title = "Open " + (pj.name || pj.id) + " running " + preset.label;
+          sItem.addEventListener("click", (e) => { e.stopPropagation(); openTab(pj.root, preset.id); });
+          sub.appendChild(sItem);
+        }
+        item.appendChild(sub);
+        const openFly = () => {
+          sub.style.display = "block";
+          const ir = item.getBoundingClientRect();   // flip left if the flyout would overflow the viewport
+          if (ir.right + 190 > window.innerWidth) { sub.style.left = "auto"; sub.style.right = "100%"; }
+          else { sub.style.right = "auto"; sub.style.left = "100%"; }
+        };
+        item.addEventListener("mouseenter", openFly);
+        item.addEventListener("mouseleave", () => { sub.style.display = "none"; });
+        item.addEventListener("click", (e) => {   // touch/click fallback: toggle the flyout
+          if (e.target === item || e.target === label || e.target === caret) {
+            e.stopPropagation();
+            if (sub.style.display === "block") sub.style.display = "none"; else openFly();
+          }
+        });
+      } else {
+        item.addEventListener("click", () => openTab(pj.root, null));   // no presets: open in lane default
+      }
+      menu.appendChild(item);
+    }
   }
 
+  // 2) AGENT CLI (in default cwd) -- spawn any configured provider CLI in this lane.
+  if (presets.length) {
+    mkTitle("Agent CLI (in default cwd)");
+    for (const preset of presets) {
+      const item = document.createElement("div");
+      item.className = "tab-menu-item";
+      item.innerText = preset.label;
+      item.title = `Open ${preset.label} in ${CONFIG.defaultCwd}`;
+      item.addEventListener("click", () => openTab(CONFIG.defaultCwd, preset.id));
+      menu.appendChild(item);
+    }
+  }
+
+  // 3) SHELL (in default cwd) -- a real WSL bash / Git Bash / PowerShell without leaving the harness.
+  if (profiles.length) {
+    mkTitle("Shell (in default cwd)");
+    for (const prof of profiles) {
+      const item = document.createElement("div");
+      item.className = "tab-menu-item";
+      item.innerText = prof.label;
+      item.title = `Open a ${prof.label} in ${CONFIG.defaultCwd}`;
+      item.addEventListener("click", () => openTab(CONFIG.defaultCwd, prof.id));
+      menu.appendChild(item);
+    }
+  }
+
+  // 4) FOLDER (quick dirs + a custom path) -- opens in this lane's default provider.
+  const roots = CONFIG.roots || [];
+  if (roots.length) {
+    mkTitle("Folder");
+    for (const root of roots) {
+      const item = document.createElement("div");
+      item.className = "tab-menu-item";
+      item.innerText = root.label;
+      item.title = root.path;
+      item.addEventListener("click", () => openTab(root.path, null));
+      menu.appendChild(item);
+    }
+  }
   const custom = document.createElement("div");
   custom.className = "tab-menu-item custom";
   custom.innerText = "Custom path…";
@@ -619,50 +716,6 @@ function showNewTabMenu(agent, anchor) {
   });
   menu.appendChild(custom);
 
-  // Agent CLI: spawn any configured provider CLI (Claude / Gemini / Codex / ...) in this card's
-  // lane, so a lane isn't fixed to one provider. Same session-spawn path as shell profiles.
-  const presets = CONFIG.agentPresets || [];
-  if (presets.length) {
-    const at = document.createElement("div");
-    at.className = "tab-menu-title";
-    at.innerText = "Agent CLI (in default cwd)";
-    menu.appendChild(at);
-    for (const preset of presets) {
-      const item = document.createElement("div");
-      item.className = "tab-menu-item";
-      item.innerText = preset.label;
-      item.title = `Open ${preset.label} in ${CONFIG.defaultCwd}`;
-      item.addEventListener("click", async () => {
-        dismissTabMenu();
-        const desc = await createSession(agent, CONFIG.defaultCwd, false, preset.id);
-        if (desc) { addSessionTab(agent, desc); activateTab(agent, desc.id); }
-      });
-      menu.appendChild(item);
-    }
-  }
-
-  // Shell profiles: a real WSL bash / Git Bash / PowerShell in this card, for local
-  // maintenance (e.g. git push from Git Bash) without leaving the harness.
-  const profiles = CONFIG.shellProfiles || [];
-  if (profiles.length) {
-    const sh = document.createElement("div");
-    sh.className = "tab-menu-title";
-    sh.innerText = "Shell (in default cwd)";
-    menu.appendChild(sh);
-    for (const prof of profiles) {
-      const item = document.createElement("div");
-      item.className = "tab-menu-item";
-      item.innerText = prof.label;
-      item.title = `Open a ${prof.label} in ${CONFIG.defaultCwd}`;
-      item.addEventListener("click", async () => {
-        dismissTabMenu();
-        const desc = await createSession(agent, CONFIG.defaultCwd, true, prof.id);
-        if (desc) { addSessionTab(agent, desc); activateTab(agent, desc.id); }
-      });
-      menu.appendChild(item);
-    }
-  }
-
   document.body.appendChild(menu);
   const r = anchor.getBoundingClientRect();
   menu.style.left = `${Math.min(r.left, window.innerWidth - 260)}px`;
@@ -671,34 +724,6 @@ function showNewTabMenu(agent, anchor) {
   setTimeout(() => {
     document.addEventListener("click", dismissTabMenuOnce, { once: true });
   }, 0);
-
-  // Projects: open the new session directly in a defined project's directory (fetched live so
-  // newly-created projects show without a reload; appended to the live menu when it returns).
-  (async () => {
-    let projects = PROJECTS;
-    try {
-      const res = await apiFetch("/api/projects");
-      const data = await res.json();
-      projects = data.projects || projects;
-    } catch (_) { /* fall back to the cached list */ }
-    if (!projects.length || document.getElementById("tab-menu") !== menu) return;
-    const pt = document.createElement("div");
-    pt.className = "tab-menu-title";
-    pt.innerText = "Project";
-    menu.appendChild(pt);
-    for (const pj of projects) {
-      const item = document.createElement("div");
-      item.className = "tab-menu-item";
-      item.innerText = pj.name || pj.id;
-      item.title = "Open " + (pj.name || pj.id) + " in " + (pj.root || "?");
-      item.addEventListener("click", async () => {
-        dismissTabMenu();
-        const desc = await createSession(agent, pj.root);
-        if (desc) { addSessionTab(agent, desc); activateTab(agent, desc.id); }
-      });
-      menu.appendChild(item);
-    }
-  })();
 }
 
 function dismissTabMenuOnce(e) {
