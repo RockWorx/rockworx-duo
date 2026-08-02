@@ -94,9 +94,30 @@ To point at a different address, set `HARNESS_LOCAL_MODELS_URL=http://localhost:
 ## Plugins
 
 A plugin is a directory under `plugins/` with a `plugin.json` manifest; it may add a nav tab + panel
-(frontend) and API routes (backend). See [`docs/PLUGINS.md`](docs/PLUGINS.md) and the bundled
+(frontend) and API routes (backend). See [`docs/PLUGINS.md`](docs/PLUGINS.md) for the contract and
 `plugins/local-models/` as a copy-paste template. Plugins run in-process as **trusted local code** --
-install only what you trust (see [`docs/SECURITY.md`](docs/SECURITY.md)).
+install only what you trust (see [`docs/SECURITY.md`](docs/SECURITY.md)). Each plugin declares its **own**
+dependencies (a plugin-local `requirements.txt`), so the core stays dependency-light and a plugin whose
+libraries aren't installed degrades gracefully with an install hint instead of failing.
+
+### Bundled plugins -- including an aerospace pack
+
+The domain features are all plugins, which keeps the core generic. RockWorx Duo ships a small
+**aerospace pack** -- example plugins that double as genuine teaching tools and show what the seam can do:
+interactive canvas plots, a live slider, and an orbitable 3-D view, each pairing the result with the
+method behind it.
+
+| Plugin | What it does | Extra dependency |
+| --- | --- | --- |
+| **Local Models** | Chat with a local OpenAI-compatible server (Ollama / LM Studio); auto-detects the port | none |
+| **Atmosphere & Units** | ISA-1976 properties vs altitude, Mach / TAS / EAS / CAS conversions, Reynolds number, and ISA-profile plots | none (pure Python) |
+| **Airfoil Lab** | Airfoil polars -- C<sub>l</sub>/C<sub>d</sub>/C<sub>m</sub>, drag polar, L/D -- for any NACA or UIUC section, with a **live angle-of-attack slider** that pitches the airfoil and moves the operating point in real time | `neuralfoil` |
+| **Wing / VLM** | Whole-wing vortex-lattice analysis: spanwise lift distribution (vs elliptical), induced drag, span efficiency, the full stability-derivative set + neutral point + static margin, and an **interactive 3-D wing** you can orbit, coloured by local lift | `aerosandbox` |
+
+Install a plugin's optional libraries into the same environment and restart, e.g.
+`pip install -r plugins/airfoil-lab/requirements.txt` -- **Local Models** and **Atmosphere & Units**
+need nothing at all. The aerospace tools are early prototypes of a fuller, student-focused
+**Aerospace Edition**; ideas and contributions are welcome in the discussions.
 
 ## Troubleshooting
 
