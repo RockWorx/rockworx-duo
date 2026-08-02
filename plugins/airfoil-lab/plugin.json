@@ -1,0 +1,7 @@
+{
+  "id": "airfoil-lab",
+  "name": "Airfoil Lab",
+  "tab": { "label": "Airfoil Lab", "icon": "✈" },
+  "frontend": { "panel": "panel.html", "script": "panel.js", "style": "panel.css" },
+  "backend": "backend.py"
+}

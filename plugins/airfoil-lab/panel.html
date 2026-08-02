@@ -1,0 +1,34 @@
+<div class="af-wrap">
+  <div class="af-controls">
+    <label>Airfoil <input id="af-name" type="text" value="naca2412" autocomplete="off" spellcheck="false"></label>
+    <label>Re <input id="af-re" type="text" value="1e6" autocomplete="off" spellcheck="false"></label>
+    <label>&alpha;
+      <input id="af-amin" type="number" value="-5" step="1"> to
+      <input id="af-amax" type="number" value="15" step="1"> step
+      <input id="af-astep" type="number" value="1" step="0.5" min="0.25">
+    </label>
+    <label>Model
+      <select id="af-model"><option>small</option><option selected>medium</option><option>large</option></select>
+    </label>
+    <button id="af-run" type="button">Compute polar</button>
+    <span id="af-status" class="af-status"></span>
+  </div>
+
+  <div id="af-install" class="af-install" style="display:none;"></div>
+
+  <div id="af-body" class="af-body" style="display:none;">
+    <div class="af-grid">
+      <div class="af-card"><div class="af-title">Airfoil</div><canvas id="af-shape"></canvas></div>
+      <div class="af-card"><div class="af-title">C<sub>L</sub> vs &alpha;</div><canvas id="af-cl"></canvas></div>
+      <div class="af-card"><div class="af-title">Drag polar (C<sub>L</sub> vs C<sub>D</sub>)</div><canvas id="af-dp"></canvas></div>
+      <div class="af-card"><div class="af-title">L/D vs &alpha;</div><canvas id="af-ld"></canvas></div>
+      <div class="af-card"><div class="af-title">C<sub>M</sub> vs &alpha;</div><canvas id="af-cm"></canvas></div>
+      <div class="af-card"><div class="af-title">Summary</div><div id="af-summary" class="af-summary"></div></div>
+    </div>
+    <div class="af-note">
+      Powered by <b>NeuralFoil</b> -- a machine-learning surrogate of <b>XFOIL</b> (viscous, steady, 2-D,
+      <b>incompressible</b>). Reynolds is chord-based; results are engineering estimates for teaching and
+      lose accuracy past stall. Compressibility (Mach) is a planned enhancement.
+    </div>
+  </div>
+</div>

@@ -1,0 +1,8 @@
+# Airfoil Lab's OWN optional dependency (NOT part of the harness core, which stays dependency-light).
+# NeuralFoil is a small ML surrogate of XFOIL; it pulls numpy + aerosandbox (used here for airfoil
+# geometry). Install into the SAME Python environment the harness runs in:
+#
+#   pip install -r plugins/airfoil-lab/requirements.txt
+#
+# ...then restart the harness. Until it is installed, the Airfoil Lab tab shows this same hint.
+neuralfoil>=0.3
