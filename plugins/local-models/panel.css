@@ -1,0 +1,9 @@
+.lm-wrap { display: flex; flex-direction: column; height: 100%; gap: 8px; padding: 12px; box-sizing: border-box; }
+.lm-bar { display: flex; align-items: center; gap: 8px; }
+.lm-status { opacity: 0.7; font-size: 12px; }
+.lm-log { flex: 1; overflow: auto; border: 1px solid #223; border-radius: 6px; padding: 8px; background: #0b1120; }
+.lm-u { color: #8ab; margin: 6px 0; white-space: pre-wrap; }
+.lm-a { color: #cde; margin: 6px 0; white-space: pre-wrap; }
+.lm-err { color: #e88; }
+.lm-form { display: flex; gap: 8px; }
+#lm-input { flex: 1; }

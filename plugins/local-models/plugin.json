@@ -1,0 +1,7 @@
+{
+  "id": "local-models",
+  "name": "Local Models",
+  "tab": { "label": "Local Models", "icon": "🤖" },
+  "frontend": { "panel": "panel.html", "script": "panel.js", "style": "panel.css" },
+  "backend": "backend.py"
+}
