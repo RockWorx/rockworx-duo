@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="vendor/xterm.min.css">
-  <link rel="stylesheet" href="styles.css?v=20260802d">
+  <link rel="stylesheet" href="styles.css?v=20260802e">
 </head>
 <body>
 
@@ -59,10 +59,6 @@
       <!-- Duo broadcast (collapsible): one prompt to both CLIs -->
       <!-- (the DUO/Bridge toggles + collision chip live on the nav ribbon above) -->
       <div class="broadcast-bar" id="duo-section" style="display:none;">
-        <div id="dictation-waveform-bar" style="display:none; width:100%; height:24px; margin-bottom:6px; align-items:center; gap:8px; background:#0f172a; border:1px solid #0284c7; border-radius:4px; padding:0 8px;">
-          <canvas id="dictation-waveform-canvas" width="200" height="18" style="height:18px;"></canvas>
-          <span style="color:#38bdf8; font-size:10px; font-family:var(--font-mono);" id="dictation-stt-preview">Listening (local Whisper STT pipeline)...</span>
-        </div>
         <input type="text" id="broadcast-input" class="terminal-input"
                placeholder="Send one prompt to BOTH CLIs - Enter to send (Up/Down for history)"
                onkeypress="handleBroadcastKeypress(event)"
@@ -73,8 +69,6 @@
           <option value="/help">/help</option>
           <option value="/clear">/clear</option>
         </select>
-        <button class="mic-btn" id="mic-btn" onclick="toggleDictation({btnId:'mic-btn', inputId:'broadcast-input'})"
-                title="Dictate a prompt to BOTH CLIs by voice -- click to start, click again to stop + transcribe. Local Whisper; nothing leaves the machine.">&#127908;</button>
         <button class="btn-primary" id="broadcast-send" onclick="sendBroadcast()">Send to Both</button>
         <label class="broadcast-force" title="Broadcasting into a running process's stdin can interrupt or corrupt its task. Tick to override the busy interlock.">
           <input type="checkbox" id="broadcast-force" onchange="updateBroadcastInterlock()"> force (unsafe)
@@ -123,7 +117,6 @@
               <button class="btn-xs" onclick="showPathMenu('claude', event.currentTarget)" title="Pick file/folder paths in Explorer and insert them at the prompt">&#128193; Paths</button>
               <button class="btn-xs" onclick="showSendMenu('claude', event.currentTarget)" title="duo_inbox: send a message to another tab (any window) -- delivered to that tab's inbox">&#9993;</button>
               <button class="btn-xs" id="inbox-btn-claude" onclick="showInbox('claude', event.currentTarget)" title="duo_inbox: this tab's inbox -- messages from other tabs; click one to stage it at the prompt (no Enter)">&#128229;<span id="inbox-count-claude"></span></button>
-              <button class="mic-btn mic-btn-sm" id="mic-btn-claude" onclick="toggleDictation({btnId:'mic-btn-claude', agent:'claude'})" title="Dictate into this Claude pane -- click to start, click again to stop. Local Whisper; stages at the prompt for you to Enter.">&#127908;</button>
               <button class="btn-xs" onclick="screenshotTerminal('claude')" title="Copy a screenshot of this terminal to the clipboard">&#128247; Screenshot</button>
               <button class="btn-xs" onclick="exportTranscript('claude')" title="Download this terminal's text as a .txt transcript">&#128190; Transcript</button>
               <button class="btn-xs" onclick="restartTerminal('claude')" title="Kill and restart the active tab's claude process">Restart</button>
@@ -157,7 +150,6 @@
               <button class="btn-xs" onclick="showPathMenu('gemini', event.currentTarget)" title="Pick file/folder paths in Explorer and insert them at the prompt">&#128193; Paths</button>
               <button class="btn-xs" onclick="showSendMenu('gemini', event.currentTarget)" title="duo_inbox: send a message to another tab (any window) -- delivered to that tab's inbox">&#9993;</button>
               <button class="btn-xs" id="inbox-btn-gemini" onclick="showInbox('gemini', event.currentTarget)" title="duo_inbox: this tab's inbox -- messages from other tabs; click one to stage it at the prompt (no Enter)">&#128229;<span id="inbox-count-gemini"></span></button>
-              <button class="mic-btn mic-btn-sm" id="mic-btn-gemini" onclick="toggleDictation({btnId:'mic-btn-gemini', agent:'gemini'})" title="Dictate into this Gemini pane -- click to start, click again to stop. Local Whisper; stages at the prompt for you to Enter.">&#127908;</button>
               <button class="btn-xs" onclick="screenshotTerminal('gemini')" title="Copy a screenshot of this terminal to the clipboard">&#128247; Screenshot</button>
               <button class="btn-xs" onclick="exportTranscript('gemini')" title="Download this terminal's text as a .txt transcript">&#128190; Transcript</button>
               <button class="btn-xs" onclick="restartTerminal('gemini')" title="Kill and restart the active tab's gemini process">Restart</button>
@@ -252,7 +244,7 @@
   <script src="vendor/addon-canvas.min.js"></script>
   <script src="vendor/addon-search.min.js"></script>
   <script src="vendor/addon-web-links.min.js"></script>
-  <script src="app.js?v=20260802d"></script>
+  <script src="app.js?v=20260802e"></script>
   <script>
     /* Suppress browser autofill (password/card/address prompts) on the harness's
        own command/path inputs -- they are not a login or payment form. */

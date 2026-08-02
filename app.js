@@ -6,7 +6,7 @@
 "use strict";
 
 let CONFIG = { wsPort: 8877, roots: [], agents: ["claude", "gemini", "local"], defaultCwd: ".", token: "" };
-let MEDIA_RECORDER = null, AUDIO_CHUNKS = [], DICTATION_TARGET = null;   // voice-input state
+// (voice-input globals removed with the mic buttons -- voice dictation is not in the public release)
 const SESSIONS_UI = {};       // session id -> state
 const ACTIVE_TAB = {};        // agent -> active session id
 let currentDirPath = null;
@@ -1574,130 +1574,8 @@ async function _pushFocusState() {
   } catch (_) { /* focus export is best-effort; never disrupt the UI */ }
 }
 
-// Voice input: click the mic to record a prompt; click again to stop -> local Whisper (in WSL)
-// transcribes it and the text drops into the target input for review + send. Push-to-talk style,
-// fully local (nothing leaves the machine).
-// target: {btnId, inputId} to fill a text box (the DUO broadcast), or {btnId, agent} to stage
-// the transcript at a specific pane's prompt (no Enter -- review + submit).
-let AUDIO_CTX = null;
-let ANALYSER_NODE = null;
-let ANIM_FRAME_ID = null;
-
-function startWaveformVisualizer(stream) {
-  const bar = document.getElementById("dictation-waveform-bar");
-  const canvas = document.getElementById("dictation-waveform-canvas");
-  const preview = document.getElementById("dictation-stt-preview");
-
-  if (bar) bar.style.display = "flex";
-  if (preview) preview.innerText = "Listening (local Whisper STT pipeline)...";
-
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext || !canvas) return;
-
-    AUDIO_CTX = new AudioContext();
-    const source = AUDIO_CTX.createMediaStreamSource(stream);
-    ANALYSER_NODE = AUDIO_CTX.createAnalyser();
-    ANALYSER_NODE.fftSize = 64;
-    source.connect(ANALYSER_NODE);
-
-    const ctx = canvas.getContext("2d");
-    const bufferLength = ANALYSER_NODE.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    function draw() {
-      ANIM_FRAME_ID = requestAnimationFrame(draw);
-      ANALYSER_NODE.getByteFrequencyData(dataArray);
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const barWidth = (canvas.width / bufferLength) * 1.5;
-      let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
-        ctx.fillStyle = "#38bdf8";
-        ctx.fillRect(x, canvas.height - barHeight, barWidth - 1, barHeight);
-        x += barWidth;
-      }
-    }
-    draw();
-  } catch (_) {}
-}
-
-function stopWaveformVisualizer() {
-  if (ANIM_FRAME_ID) cancelAnimationFrame(ANIM_FRAME_ID);
-  if (AUDIO_CTX) {
-    try { AUDIO_CTX.close(); } catch (_) {}
-  }
-  AUDIO_CTX = null;
-  ANALYSER_NODE = null;
-
-  const bar = document.getElementById("dictation-waveform-bar");
-  if (bar) bar.style.display = "none";
-}
-
-async function toggleDictation(target) {
-  const btn = document.getElementById(target.btnId);
-  if (MEDIA_RECORDER && MEDIA_RECORDER.state === "recording") {
-    MEDIA_RECORDER.stop();                       // fires onstop -> transcribe
-    stopWaveformVisualizer();
-    return;
-  }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    AUDIO_CHUNKS = [];
-    DICTATION_TARGET = target;
-    MEDIA_RECORDER = new MediaRecorder(stream);
-    MEDIA_RECORDER.ondataavailable = (e) => { if (e.data && e.data.size) AUDIO_CHUNKS.push(e.data); };
-    MEDIA_RECORDER.onstop = async () => {
-      stream.getTracks().forEach((t) => t.stop());   // release the mic
-      stopWaveformVisualizer();
-      if (btn) { btn.classList.remove("recording"); btn.classList.add("busy"); }
-      const blob = new Blob(AUDIO_CHUNKS, { type: (MEDIA_RECORDER && MEDIA_RECORDER.mimeType) || "audio/webm" });
-      try {
-        if (!blob.size) { showToast("No audio captured", "error"); return; }
-        const res = await apiFetch("/api/transcribe", {
-          method: "POST", headers: { "Content-Type": blob.type }, body: blob });
-        const data = await res.json();
-        if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
-        if (!data.text) { showToast("Didn't catch that -- try again", "error"); return; }
-        deliverDictation(DICTATION_TARGET, data.text);
-      } catch (e) {
-        showToast("Transcription failed: " + e.message, "error");
-      } finally {
-        if (btn) btn.classList.remove("busy");
-      }
-    };
-    MEDIA_RECORDER.start();
-    startWaveformVisualizer(stream);
-    if (btn) btn.classList.add("recording");
-    showToast("Recording -- click the mic again to stop + transcribe");
-  } catch (e) {
-    showToast("Mic unavailable: " + e.message, "error");
-  }
-}
-
-// Route a transcript to its target: a text input (append) or a pane's live PTY (stage, no Enter).
-function deliverDictation(target, text) {
-  if (target.inputId) {
-    const input = document.getElementById(target.inputId);
-    if (input) {
-      input.value = (input.value.trim() ? input.value.trim() + " " : "") + text;
-      input.focus();
-    }
-    return;
-  }
-  if (target.agent) {
-    const state = SESSIONS_UI[ACTIVE_TAB[target.agent]];
-    if (!state || !state.ws || state.ws.readyState !== WebSocket.OPEN) {
-      showToast(`No live ${target.agent} session`, "error");
-      return;
-    }
-    state.ws.send(JSON.stringify({ type: "input", data: text }));   // no Enter -- review + submit
-    if (state.term) state.term.focus();
-    showToast(`Dictated into ${target.agent} -- review + Enter to send`);
-  }
-}
+// (Voice dictation is intentionally omitted from the public release: it required a local WSL Whisper
+//  backend that is not part of this generic cross-platform build. The mic buttons were removed with it.)
 
 // --- Busy/idle state signaling + notifications -------------------------------
 
