@@ -1,6 +1,6 @@
 # Security model
 
-Agent Harness is a **local developer tool**. It runs an HTTP server on your machine that can spawn
+RockWorx Duo is a **local developer tool**. It runs an HTTP server on your machine that can spawn
 terminals and read/write files in the workspace. Treat it like any local dev server.
 
 ## What the core enforces

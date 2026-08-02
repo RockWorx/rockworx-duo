@@ -1,4 +1,6 @@
-# Agent Harness
+# RockWorx Duo
+
+*An open-source developer tool from [RockWorx](https://github.com/RockWorx) -- offered to the community in the spirit of power-factor Human-AI collaboration.*
 
 A local, browser-based cockpit for driving multiple AI coding-agent CLIs side by side. It runs a
 small HTTP server on your own machine that spawns real terminals (via a PTY) and fans them out to a
