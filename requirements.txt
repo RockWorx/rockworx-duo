@@ -1,0 +1,5 @@
+# Core dependency (WebSocket bridge for the terminal fan-out).
+websockets>=12
+
+# Windows PTY backend (ConPTY). On POSIX, the stdlib `pty` module is used instead (planned).
+pywinpty>=2.0 ; sys_platform == "win32"

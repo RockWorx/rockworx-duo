@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Harness</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/xterm.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Header Navbar (two-row: brand + controls on top, full-width tab strip below) -->
+  <header class="app-header">
+    <div class="app-header-row1">
+      <div class="brand">
+        <div class="brand-logo">AH</div>
+        <div class="brand-title">Agent Harness</div>
+        <span class="brand-subtitle">v1.0</span>
+      </div>
+      <div class="header-controls">
+        <div class="genome-strip" id="genome-strip" title="Repository status">repo: ...</div>
+        <button class="btn-xs" id="btn-layouts" title="Save or open named tab layouts">Layouts</button>
+        <button class="btn-xs" id="btn-notify" title="Browser notification when a long CLI task finishes">&#128277; Notify: off</button>
+        <div class="status-badge" id="server-status-badge">
+          <span class="pulse-dot" id="server-status-dot"></span>
+          <span id="server-status-text">Connecting...</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="cli"><span>&#128250;</span> Dual CLI</button>
+      <button class="nav-tab" data-tab="projects"><span>&#128193;</span> Projects</button>
+      <span class="nav-spacer"></span>
+      <!-- Dual-CLI-only toggles: shown right-justified on the ribbon only when the CLI view is active -->
+      <div class="nav-duo-controls" id="nav-duo-controls">
+        <span class="collision-chip" id="collision-chip" style="display:none;"></span>
+        <button class="btn-xs duo-toggle" id="duo-open" onclick="toggleDuoSection()"
+                title="Send one prompt to BOTH CLIs -- reveal the shared prompt box">DUO</button>
+        <button class="btn-xs duo-toggle" id="bridge-open" onclick="toggleBridgeSection()"
+                title="Context bridge: move output between the agents, keep a shared buffer">&#8942; Bridge</button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Main View Container -->
+  <main class="main-container">
+
+    <!-- VIEW 1: Dual CLI Split View -->
+    <section class="view-panel active" id="panel-cli">
+
+      <!-- Duo broadcast (collapsible): one prompt to both CLIs -->
+      <!-- (the DUO/Bridge toggles + collision chip live on the nav ribbon above) -->
+      <div class="broadcast-bar" id="duo-section" style="display:none;">
+        <div id="dictation-waveform-bar" style="display:none; width:100%; height:24px; margin-bottom:6px; align-items:center; gap:8px; background:#0f172a; border:1px solid #0284c7; border-radius:4px; padding:0 8px;">
+          <canvas id="dictation-waveform-canvas" width="200" height="18" style="height:18px;"></canvas>
+          <span style="color:#38bdf8; font-size:10px; font-family:var(--font-mono);" id="dictation-stt-preview">Listening (local Whisper STT pipeline)...</span>
+        </div>
+        <input type="text" id="broadcast-input" class="terminal-input"
+               placeholder="Send one prompt to BOTH CLIs - Enter to send (Up/Down for history)"
+               onkeypress="handleBroadcastKeypress(event)"
+               onkeydown="handleBroadcastKeydown(event)">
+        <select id="broadcast-presets" class="btn-xs broadcast-presets-select" onchange="applyBroadcastPreset(this)" title="Insert common preset commands">
+          <option value="" disabled selected>Presets...</option>
+          <option value="/context">/context</option>
+          <option value="/help">/help</option>
+          <option value="/clear">/clear</option>
+        </select>
+        <button class="mic-btn" id="mic-btn" onclick="toggleDictation({btnId:'mic-btn', inputId:'broadcast-input'})"
+                title="Dictate a prompt to BOTH CLIs by voice -- click to start, click again to stop + transcribe. Local Whisper; nothing leaves the machine.">&#127908;</button>
+        <button class="btn-primary" id="broadcast-send" onclick="sendBroadcast()">Send to Both</button>
+        <label class="broadcast-force" title="Broadcasting into a running process's stdin can interrupt or corrupt its task. Tick to override the busy interlock.">
+          <input type="checkbox" id="broadcast-force" onchange="updateBroadcastInterlock()"> force (unsafe)
+        </label>
+        <span class="broadcast-targets" id="broadcast-targets"></span>
+      </div>
+
+      <!-- Context bridge (collapsible) -->
+      <div id="bridge-section" style="display:none;">
+        <div class="bridge-bar">
+          <span class="bridge-label" title="Context bridge: capture one agent's output, inject it into the other, or keep a shared buffer">BRIDGE</span>
+          <button class="btn-xs" onclick="grabToBridge('claude')" title="Copy Claude's selection (or last 40 lines) into the shared buffer">Grab &#8592; Claude</button>
+          <button class="btn-xs" onclick="grabToBridge('gemini')" title="Copy Gemini's selection (or last 40 lines) into the shared buffer">Grab &#8592; Gemini</button>
+          <button class="btn-xs" onclick="grabToBridge('local')" title="Copy Local's selection (or last 40 lines) into the shared buffer">Grab &#8592; Local</button>
+          <button class="btn-xs" onclick="injectFromBridge('claude')" title="Type the buffer into Claude's prompt (no auto-Enter - review first)">Inject &#8594; Claude</button>
+          <button class="btn-xs" onclick="injectFromBridge('gemini')" title="Type the buffer into Gemini's prompt (no auto-Enter - review first)">Inject &#8594; Gemini</button>
+          <button class="btn-xs" onclick="injectFromBridge('local')" title="Type the buffer into Local's prompt">Inject &#8594; Local</button>
+          <span style="flex:1;"></span>
+          <button class="btn-xs" id="bridge-toggle" onclick="toggleBridge()">Show buffer</button>
+          <button class="btn-xs" onclick="clearBridge()">Clear</button>
+        </div>
+        <div class="bridge-panel" id="bridge-panel" style="display:none;">
+          <textarea id="bridge-text" class="bridge-text" spellcheck="false"
+            placeholder="Shared buffer - grab output from one agent, inject into the other, or jot notes both can reference."></textarea>
+        </div>
+      </div>
+
+      <div class="dual-cli-grid">
+
+        <!-- Claude CLI Terminal -->
+        <div class="terminal-card claude-card">
+          <div class="terminal-header">
+            <div class="agent-info">
+              <div class="agent-icon claude-icon">C</div>
+              <div>
+                <div class="agent-name">Claude Code
+                  <span class="term-status" id="status-claude" title="session status"></span>
+                </div>
+                <div class="agent-model" id="model-claude">claude CLI &middot; cwd: ~ &middot; <span class="token-badge" id="token-badge-claude" style="color:#38bdf8; font-family:var(--font-mono);" title="Approximate session context window fill %">Context: ~15% (30k)</span></div>
+              </div>
+            </div>
+            <div class="term-actions">
+              <button class="btn-xs model-btn" id="model-btn-claude" onclick="showModelMenu('claude', event.currentTarget)" title="Switch this session's model (stages /model at the prompt)">&#9670; <span id="model-label-claude">Opus 4.8</span> &#9662;</button>
+              <button class="btn-xs effort-btn" id="effort-btn-claude" onclick="showEffortMenu(event.currentTarget)" title="Set Claude's reasoning effort (/effort). Extra/Max push hardest and use more usage; High or below for routine work. Stages the command - you Enter to apply.">&#9889; <span id="effort-label-claude">High</span> &#9662;</button>
+              <button class="btn-xs" onclick="resumeSession('claude')" title="Open Claude Code's past-session picker (/resume)">&#8635; Resume</button>
+              <button class="btn-xs" onclick="showPathMenu('claude', event.currentTarget)" title="Pick file/folder paths in Explorer and insert them at the prompt">&#128193; Paths</button>
+              <button class="mic-btn mic-btn-sm" id="mic-btn-claude" onclick="toggleDictation({btnId:'mic-btn-claude', agent:'claude'})" title="Dictate into this Claude pane -- click to start, click again to stop. Local Whisper; stages at the prompt for you to Enter.">&#127908;</button>
+              <button class="btn-xs" onclick="screenshotTerminal('claude')" title="Copy a screenshot of this terminal to the clipboard">&#128247; Screenshot</button>
+              <button class="btn-xs" onclick="exportTranscript('claude')" title="Download this terminal's text as a .txt transcript">&#128190; Transcript</button>
+              <button class="btn-xs" onclick="restartTerminal('claude')" title="Kill and restart the active tab's claude process">Restart</button>
+            </div>
+          </div>
+          <div class="term-tabbar">
+            <div class="term-tabs" id="tabs-claude"></div>
+            <button class="btn-xs term-newtab" id="newtab-claude" title="New claude session in a project">+</button>
+          </div>
+          <div class="terminal-body xterm-body">
+            <div class="xterm-stack" id="stack-claude"></div>
+          </div>
+        </div>
+
+        <!-- Gemini CLI Terminal -->
+        <div class="terminal-card gemini-card">
+          <div class="terminal-header">
+            <div class="agent-info">
+              <div class="agent-icon gemini-icon">G</div>
+              <div>
+                <div class="agent-name">Gemini CLI
+                  <span class="term-status" id="status-gemini" title="session status"></span>
+                </div>
+                <div class="agent-model" id="model-gemini">gemini CLI &middot; cwd: ~ &middot; <span class="token-badge" id="token-badge-gemini" style="color:#38bdf8; font-family:var(--font-mono);" title="Approximate session context window fill %">Context: ~12% (24k)</span></div>
+              </div>
+            </div>
+            <div class="term-actions">
+              <button class="btn-xs model-btn" id="model-btn-gemini" onclick="showModelMenu('gemini', event.currentTarget)" title="Switch this session's model (stages /model at the prompt)">&#9670; <span id="model-label-gemini">Gemini 3.6 Flash</span> &#9662;</button>
+              <button class="btn-xs effort-btn" id="effort-btn-gemini" onclick="showEffortMenu('gemini', event.currentTarget)" title="Set Gemini's reasoning effort (/effort low|medium|high). Stages the command - you Enter to apply.">&#9889; <span id="effort-label-gemini">High</span> &#9662;</button>
+              <button class="btn-xs" onclick="resumeSession('gemini')" title="List Gemini's saved checkpoints (/chat list); resume with /chat resume <tag>">&#8635; Resume</button>
+              <button class="btn-xs" onclick="showPathMenu('gemini', event.currentTarget)" title="Pick file/folder paths in Explorer and insert them at the prompt">&#128193; Paths</button>
+              <button class="mic-btn mic-btn-sm" id="mic-btn-gemini" onclick="toggleDictation({btnId:'mic-btn-gemini', agent:'gemini'})" title="Dictate into this Gemini pane -- click to start, click again to stop. Local Whisper; stages at the prompt for you to Enter.">&#127908;</button>
+              <button class="btn-xs" onclick="screenshotTerminal('gemini')" title="Copy a screenshot of this terminal to the clipboard">&#128247; Screenshot</button>
+              <button class="btn-xs" onclick="exportTranscript('gemini')" title="Download this terminal's text as a .txt transcript">&#128190; Transcript</button>
+              <button class="btn-xs" onclick="restartTerminal('gemini')" title="Kill and restart the active tab's gemini process">Restart</button>
+            </div>
+          </div>
+          <div class="term-tabbar">
+            <div class="term-tabs" id="tabs-gemini"></div>
+            <button class="btn-xs term-newtab" id="newtab-gemini" title="New gemini session in a project">+</button>
+          </div>
+          <div class="terminal-body xterm-body">
+            <div class="xterm-stack" id="stack-gemini"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 2: Projects & Directory Explorer -->
+    <section class="view-panel" id="panel-projects">
+      <div class="projects-layout">
+
+        <!-- Project quick links (populated from /api/config) -->
+        <div class="project-sidebar">
+          <div class="project-sidebar-head">
+            <div class="section-title">Workspaces</div>
+            <button class="btn-xs" id="new-project-btn" onclick="showNewProjectForm()" title="Scaffold a new project (writes a project.md and loads it)">+ New Project</button>
+          </div>
+          <div id="project-list"><!-- populated by app.js --></div>
+        </div>
+
+        <!-- Live File & Path Explorer (replaced by the project dashboard on select) -->
+        <div class="file-explorer-panel" id="file-explorer-panel">
+          <div class="explorer-header">
+            <div style="min-width: 0;">
+              <div class="breadcrumb" id="explorer-breadcrumb"><!-- populated --></div>
+            </div>
+            <div class="explorer-header-actions">
+              <button class="btn-xs" onclick="copyToClipboard(currentDirPath)" title="Copy the current directory path">Copy Dir Path</button>
+              <button class="btn-xs" onclick="openDiff(null)" title="Show unstaged git changes in the repository">Repo Diff</button>
+              <div class="search-input-box">
+                <span class="search-icon">&#128269;</span>
+                <input type="text" id="file-search-input" placeholder="Filter this directory..." oninput="filterFiles()">
+              </div>
+            </div>
+          </div>
+
+          <div class="file-tree-container" id="file-tree-list">
+            <!-- populated by app.js -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Read-only file / artifact / diff preview drawer -->
+  <div class="preview-drawer" id="preview-drawer">
+    <div class="preview-head">
+      <span class="preview-title" id="preview-title">Preview</span>
+      <div class="preview-actions" id="preview-actions"></div>
+      <button class="btn-xs" onclick="closePreview()" title="Close (Esc)">&#10005;</button>
+    </div>
+    <div class="preview-sub" id="preview-sub"></div>
+    <div class="preview-body" id="preview-body"></div>
+  </div>
+
+  <!-- Side-by-Side Visual Git-Diff Review Modal -->
+  <div class="diff-modal-backdrop" id="diff-modal-backdrop" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+    <div class="diff-modal-container" style="background:#0f172a; border:1px solid #334155; border-radius:8px; width:95%; max-width:1200px; height:85vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.8);">
+      <div class="diff-modal-head" style="padding:12px 16px; border-bottom:1px solid #334155; background:#1e293b; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <strong style="color:#f8fafc; font-size:14px; font-family:var(--font-mono);">Visual Side-by-Side Git Diff Review</strong>
+          <button class="btn-xs" id="diff-toggle-staged" onclick="toggleGitDiffStaged()" style="background:#0284c7; color:#fff;">Showing: Unstaged Changes</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="btn-xs" onclick="refreshGitDiffModal()">&#8635; Refresh</button>
+          <button class="btn-xs" onclick="closeGitDiffModal()" style="font-weight:bold;">&#10005; Close</button>
+        </div>
+      </div>
+      <div class="diff-modal-body" id="diff-modal-body" style="flex:1; overflow:auto; padding:16px; font-family:var(--font-mono); font-size:11px; background:#0b1120;">
+        <div style="color:#94a3b8;">Click Git Diff to load staged or unstaged changes...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="vendor/xterm.min.js"></script>
+  <script src="vendor/addon-fit.min.js"></script>
+  <script src="vendor/addon-canvas.min.js"></script>
+  <script src="vendor/addon-search.min.js"></script>
+  <script src="vendor/addon-web-links.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    /* Suppress browser autofill (password/card/address prompts) on the harness's
+       own command/path inputs -- they are not a login or payment form. */
+    (function () {
+      document.querySelectorAll("input, textarea").forEach(function (el) {
+        el.setAttribute("autocomplete", "off");
+        el.setAttribute("autocorrect", "off");
+        el.setAttribute("autocapitalize", "off");
+        el.setAttribute("data-lpignore", "true");
+        el.setAttribute("data-1p-ignore", "");
+      });
+    })();
+  </script>
+</body>
+</html>
