@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="vendor/xterm.min.css">
-  <link rel="stylesheet" href="styles.css?v=20260802c">
+  <link rel="stylesheet" href="styles.css?v=20260802d">
 </head>
 <body>
 
@@ -121,6 +121,8 @@
               <button class="btn-xs effort-btn" id="effort-btn-claude" onclick="showEffortMenu('claude', event.currentTarget)" title="Set Claude's reasoning effort (/effort). Extra/Max push hardest and use more usage; High or below for routine work. Stages the command - you Enter to apply.">&#9889; <span id="effort-label-claude">High</span> &#9662;</button>
               <button class="btn-xs" id="resume-btn-claude" onclick="resumeSession('claude')" title="Open Claude Code's past-session picker (/resume)">&#8635; Resume</button>
               <button class="btn-xs" onclick="showPathMenu('claude', event.currentTarget)" title="Pick file/folder paths in Explorer and insert them at the prompt">&#128193; Paths</button>
+              <button class="btn-xs" onclick="showSendMenu('claude', event.currentTarget)" title="duo_inbox: send a message to another tab (any window) -- delivered to that tab's inbox">&#9993;</button>
+              <button class="btn-xs" id="inbox-btn-claude" onclick="showInbox('claude', event.currentTarget)" title="duo_inbox: this tab's inbox -- messages from other tabs; click one to stage it at the prompt (no Enter)">&#128229;<span id="inbox-count-claude"></span></button>
               <button class="mic-btn mic-btn-sm" id="mic-btn-claude" onclick="toggleDictation({btnId:'mic-btn-claude', agent:'claude'})" title="Dictate into this Claude pane -- click to start, click again to stop. Local Whisper; stages at the prompt for you to Enter.">&#127908;</button>
               <button class="btn-xs" onclick="screenshotTerminal('claude')" title="Copy a screenshot of this terminal to the clipboard">&#128247; Screenshot</button>
               <button class="btn-xs" onclick="exportTranscript('claude')" title="Download this terminal's text as a .txt transcript">&#128190; Transcript</button>
@@ -153,6 +155,8 @@
               <button class="btn-xs effort-btn" id="effort-btn-gemini" onclick="showEffortMenu('gemini', event.currentTarget)" title="Set Gemini's reasoning effort (/effort low|medium|high). Stages the command - you Enter to apply.">&#9889; <span id="effort-label-gemini">High</span> &#9662;</button>
               <button class="btn-xs" id="resume-btn-gemini" onclick="resumeSession('gemini')" title="List Gemini's saved checkpoints (/chat list); resume with /chat resume <tag>">&#8635; Resume</button>
               <button class="btn-xs" onclick="showPathMenu('gemini', event.currentTarget)" title="Pick file/folder paths in Explorer and insert them at the prompt">&#128193; Paths</button>
+              <button class="btn-xs" onclick="showSendMenu('gemini', event.currentTarget)" title="duo_inbox: send a message to another tab (any window) -- delivered to that tab's inbox">&#9993;</button>
+              <button class="btn-xs" id="inbox-btn-gemini" onclick="showInbox('gemini', event.currentTarget)" title="duo_inbox: this tab's inbox -- messages from other tabs; click one to stage it at the prompt (no Enter)">&#128229;<span id="inbox-count-gemini"></span></button>
               <button class="mic-btn mic-btn-sm" id="mic-btn-gemini" onclick="toggleDictation({btnId:'mic-btn-gemini', agent:'gemini'})" title="Dictate into this Gemini pane -- click to start, click again to stop. Local Whisper; stages at the prompt for you to Enter.">&#127908;</button>
               <button class="btn-xs" onclick="screenshotTerminal('gemini')" title="Copy a screenshot of this terminal to the clipboard">&#128247; Screenshot</button>
               <button class="btn-xs" onclick="exportTranscript('gemini')" title="Download this terminal's text as a .txt transcript">&#128190; Transcript</button>
@@ -248,7 +252,7 @@
   <script src="vendor/addon-canvas.min.js"></script>
   <script src="vendor/addon-search.min.js"></script>
   <script src="vendor/addon-web-links.min.js"></script>
-  <script src="app.js?v=20260802c"></script>
+  <script src="app.js?v=20260802d"></script>
   <script>
     /* Suppress browser autofill (password/card/address prompts) on the harness's
        own command/path inputs -- they are not a login or payment form. */

@@ -96,6 +96,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderNotifyButton();
   renderModelLabels();
   renderEffortLabel();
+  // duo_inbox: another window writing a duo-inbox:* key fires `storage` here -> live badge refresh.
+  window.addEventListener("storage", (e) => { if (e.key && e.key.indexOf("duo-inbox:") === 0) updateInboxBadges(); });
+  updateInboxBadges();
   renderBroadcastTargets();
   refreshGenome();
   setInterval(refreshGenome, 60000);
@@ -726,6 +729,129 @@ async function showNewTabMenu(agent, anchor) {
   }, 0);
 }
 
+// --- duo_inbox: cross-tab / cross-window messaging via localStorage --------------------------
+// A browser-local instantiation of the duo_inbox idea: address a message to any TAB (its session
+// id, which is global across every browser window via /api/sessions) and drop it in that tab's
+// inbox key. localStorage's `storage` event notifies OTHER windows live; same-window sends refresh
+// the badge directly. NEVER auto-injects -- Insert stages the text at the prompt and the human
+// presses Enter (same review-then-submit rule as DUO broadcast + the Bridge). Identity is inherited
+// from the live tabs (provider:base + id), never a hardcoded pair, so it works for any agent combo.
+function inboxKey(id) { return "duo-inbox:" + id; }
+function readInbox(id) {
+  try { return JSON.parse(localStorage.getItem(inboxKey(id)) || "[]"); } catch (_) { return []; }
+}
+function writeInbox(id, msgs) { localStorage.setItem(inboxKey(id), JSON.stringify(msgs)); }
+
+async function showSendMenu(agent, anchor) {
+  const from = SESSIONS_UI[ACTIVE_TAB[agent]];
+  if (!from) { showToast(`${agent}: no active tab to send from`, "error"); return; }
+  dismissTabMenu();
+  let sessions = [];
+  try { sessions = ((await (await apiFetch("/api/sessions")).json()).sessions) || []; }
+  catch (_) { showToast("Could not load the tab list", "error"); return; }
+  if (document.getElementById("tab-menu")) return;
+  const menu = document.createElement("div");
+  menu.className = "tab-menu"; menu.id = "tab-menu";
+  const title = document.createElement("div");
+  title.className = "tab-menu-title";
+  title.innerText = "Send message to…";
+  menu.appendChild(title);
+  const targets = sessions.filter((s) => s.id !== from.id);
+  const fromLabel = `${from.provider || agent}:${from.label}`;
+  if (!targets.length) {
+    const none = document.createElement("div");
+    none.className = "tab-menu-item"; none.innerText = "(no other tabs)";
+    menu.appendChild(none);
+  }
+  for (const s of targets) {
+    const base = (s.cwd || "").replace(/[\\/]+$/, "").split(/[\\/]/).pop() || s.label || s.id;
+    const to = `${s.profile || s.agent}:${base}`;
+    const item = document.createElement("div");
+    item.className = "tab-menu-item";
+    item.innerText = to;
+    item.title = "Send to " + s.id;
+    item.addEventListener("click", () => {
+      dismissTabMenu();
+      const text = prompt(`Message to ${to}:`);
+      if (!text) return;
+      const msgs = readInbox(s.id);
+      msgs.push({ from: from.id, fromLabel, text, ts: Date.now() });
+      writeInbox(s.id, msgs);
+      updateInboxBadges();   // storage event only fires in OTHER windows -- refresh this one directly
+      showToast(`Sent to ${to}`);
+    });
+    menu.appendChild(item);
+  }
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.left = `${Math.min(r.left, window.innerWidth - 280)}px`;
+  menu.style.top = `${r.bottom + 6}px`;
+  setTimeout(() => document.addEventListener("click", dismissTabMenuOnce, { once: true }), 0);
+}
+
+function showInbox(agent, anchor) {
+  const to = SESSIONS_UI[ACTIVE_TAB[agent]];
+  if (!to) { showToast(`${agent}: no active tab`, "error"); return; }
+  dismissTabMenu();
+  const msgs = readInbox(to.id);
+  const menu = document.createElement("div");
+  menu.className = "tab-menu"; menu.id = "tab-menu";
+  const title = document.createElement("div");
+  title.className = "tab-menu-title";
+  title.innerText = `Inbox -- ${to.provider || agent}:${to.label}`;
+  menu.appendChild(title);
+  if (!msgs.length) {
+    const none = document.createElement("div");
+    none.className = "tab-menu-item"; none.innerText = "(no messages)";
+    menu.appendChild(none);
+  } else {
+    msgs.forEach((m) => {
+      const when = new Date(m.ts);
+      const hh = String(when.getHours()).padStart(2, "0");
+      const mm = String(when.getMinutes()).padStart(2, "0");
+      const preview = m.text.length > 56 ? m.text.slice(0, 56) + "…" : m.text;
+      const item = document.createElement("div");
+      item.className = "tab-menu-item";
+      item.innerText = `${m.fromLabel} ${hh}:${mm}: ${preview}`;
+      item.title = m.text + "\n\nClick to stage this text at the prompt (no Enter).";
+      item.addEventListener("click", () => {
+        dismissTabMenu();
+        if (to.ws && to.ws.readyState === WebSocket.OPEN) {
+          to.ws.send(JSON.stringify({ type: "input", data: m.text }));   // stage, no Enter
+          to.term.focus();
+        }
+        writeInbox(to.id, readInbox(to.id).filter((x) => !(x.ts === m.ts && x.from === m.from && x.text === m.text)));
+        updateInboxBadges();
+        showToast("Message staged at the prompt -- Enter to send");
+      });
+      menu.appendChild(item);
+    });
+    const clear = document.createElement("div");
+    clear.className = "tab-menu-item custom";
+    clear.innerText = "Clear all";
+    clear.addEventListener("click", () => { dismissTabMenu(); writeInbox(to.id, []); updateInboxBadges(); });
+    menu.appendChild(clear);
+  }
+  document.body.appendChild(menu);
+  const r = anchor.getBoundingClientRect();
+  menu.style.left = `${Math.min(r.left, window.innerWidth - 320)}px`;
+  menu.style.top = `${r.bottom + 6}px`;
+  setTimeout(() => document.addEventListener("click", dismissTabMenuOnce, { once: true }), 0);
+}
+
+function updateInboxBadge(agent) {
+  const btn = document.getElementById(`inbox-btn-${agent}`);
+  if (!btn) return;
+  const to = SESSIONS_UI[ACTIVE_TAB[agent]];
+  const n = to ? readInbox(to.id).length : 0;
+  const countEl = document.getElementById(`inbox-count-${agent}`);
+  if (countEl) countEl.innerText = n ? ` ${n}` : "";
+  btn.classList.toggle("inbox-unread", n > 0);
+}
+function updateInboxBadges() {
+  for (const a of (CONFIG.agents || ["claude", "gemini"])) updateInboxBadge(a);
+}
+
 function dismissTabMenuOnce(e) {
   const menu = document.getElementById("tab-menu");
   if (menu && !menu.contains(e.target)) menu.remove();
@@ -830,6 +956,8 @@ function renderLaneToolbar(agent) {
 
   const resumeBtn = document.getElementById(`resume-btn-${agent}`);
   if (resumeBtn) resumeBtn.style.display = meta.isShell ? "none" : "";
+
+  updateInboxBadge(agent);   // the inbox is per-tab -- refresh the badge for the newly-active tab
 }
 
 function currentModel(agent) {
