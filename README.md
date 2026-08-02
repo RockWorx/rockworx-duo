@@ -2,13 +2,15 @@
 
 *An open-source developer tool from [RockWorx](https://github.com/RockWorx) -- offered to the community in the spirit of power-factor Human-AI collaboration.*
 
+[![CI](https://github.com/RockWorx/rockworx-duo/actions/workflows/ci.yml/badge.svg)](https://github.com/RockWorx/rockworx-duo/actions/workflows/ci.yml)
+
 A local, browser-based cockpit for driving multiple AI coding-agent CLIs side by side. It runs a
 small HTTP server on your own machine that spawns real terminals (via a PTY) and fans them out to a
 browser UI, with file explorer, git, and project panels alongside. Domain features are add-ons
 through a simple **plugin** seam, so the core stays generic.
 
-> Windows-first today (terminals spawn via `pywinpty`/ConPTY). The PTY layer is abstracted behind a
-> small interface, so a POSIX backend is a fast-follow.
+> **Cross-platform:** Windows (ConPTY via `pywinpty`) and macOS + Linux (via `ptyprocess`) -- the PTY
+> backend is selected at runtime. CI runs the real terminal round-trip on all three (see the badge above).
 
 ## Features
 
@@ -21,7 +23,8 @@ through a simple **plugin** seam, so the core stays generic.
 
 ## Quickstart
 
-Requirements: Python 3.10+ and, on Windows, `pip install pywinpty`.
+Requirements: Python 3.10+. Then `pip install -r requirements.txt` (installs `websockets`, plus
+`pywinpty` on Windows or `ptyprocess` on macOS/Linux).
 
 ```bash
 cp harness.config.example.json harness.config.json   # optional; edit provider presets
