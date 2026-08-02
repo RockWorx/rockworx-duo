@@ -672,6 +672,34 @@ function showNewTabMenu(agent, anchor) {
   setTimeout(() => {
     document.addEventListener("click", dismissTabMenuOnce, { once: true });
   }, 0);
+
+  // Projects: open the new session directly in a defined project's directory (fetched live so
+  // newly-created projects show without a reload; appended to the live menu when it returns).
+  (async () => {
+    let projects = PROJECTS;
+    try {
+      const res = await apiFetch("/api/projects");
+      const data = await res.json();
+      projects = data.projects || projects;
+    } catch (_) { /* fall back to the cached list */ }
+    if (!projects.length || document.getElementById("tab-menu") !== menu) return;
+    const pt = document.createElement("div");
+    pt.className = "tab-menu-title";
+    pt.innerText = "Project";
+    menu.appendChild(pt);
+    for (const pj of projects) {
+      const item = document.createElement("div");
+      item.className = "tab-menu-item";
+      item.innerText = pj.name || pj.id;
+      item.title = "Open " + (pj.name || pj.id) + " in " + (pj.root || "?");
+      item.addEventListener("click", async () => {
+        dismissTabMenu();
+        const desc = await createSession(agent, pj.root);
+        if (desc) { addSessionTab(agent, desc); activateTab(agent, desc.id); }
+      });
+      menu.appendChild(item);
+    }
+  })();
 }
 
 function dismissTabMenuOnce(e) {
