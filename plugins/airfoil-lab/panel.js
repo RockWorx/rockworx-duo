@@ -298,6 +298,14 @@ Harness.registerPanel("airfoil-lab", {
       });
       const slider = document.getElementById("af-alpha-slider");
       if (slider) slider.addEventListener("input", afSliderMove);
+      // Reveal the full airfoil list on click: a datalist filters its options by the field's current
+      // value, so a pre-filled "naca2412" hides everything else. Clear on focus, restore on blur if
+      // the user didn't pick/type anything.
+      const nameEl = document.getElementById("af-name");
+      if (nameEl) {
+        nameEl.addEventListener("focus", () => { nameEl.dataset.prev = nameEl.value; nameEl.value = ""; });
+        nameEl.addEventListener("blur", () => { if (!nameEl.value && nameEl.dataset.prev) nameEl.value = nameEl.dataset.prev; });
+      }
       AF_WIRED = true;
     }
     afInit();
