@@ -1307,6 +1307,16 @@ class ExclusiveHTTPServer(ThreadingHTTPServer):
                                    socket.SO_EXCLUSIVEADDRUSE, 1)
         super().server_bind()
 
+    def handle_error(self, request, client_address):
+        # A browser closing a keep-alive / speculative socket (common with Safari over
+        # a tailnet) raises ConnectionResetError / BrokenPipeError deep in the stdlib
+        # handler. That is normal CLIENT behavior, not a server fault -- swallow it
+        # quietly instead of dumping a multi-line traceback (which reads as "broken").
+        exc = sys.exc_info()[1]
+        if isinstance(exc, (ConnectionResetError, ConnectionAbortedError, BrokenPipeError)):
+            return
+        super().handle_error(request, client_address)
+
 
 # ---------------------------------------------------------------------------
 # Startup
