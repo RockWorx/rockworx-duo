@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+harness.config.json
+.harness/
+_scrollback/
+*.log
+.DS_Store
