@@ -678,6 +678,10 @@ function dismissTabMenuOnce(e) {
 function dismissTabMenu() {
   const menu = document.getElementById("tab-menu");
   if (menu) menu.remove();
+  // Also drop any pending outside-click dismisser. Otherwise a dismisser armed by the PREVIOUS
+  // open fires on the very click that opens the NEXT menu and removes the fresh menu -- the
+  // "+ works once, then nothing" bug. Every open funnels through here, so this is the one place to clear it.
+  document.removeEventListener("click", dismissTabMenuOnce);
 }
 
 // --- Per-card model selector -------------------------------------------------
