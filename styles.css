@@ -281,6 +281,13 @@ body {
   border-top: 3px solid var(--local-color);
 }
 
+/* Tab-primary layout (2026-08-02): the tab strip is the lane's TOP row; the toolbar
+   (identity + the ACTIVE tab's provider controls) sits beneath it as that tab's context
+   bar. Flex `order` keeps the authored DOM intact -- .terminal-card is already flex/column. */
+.term-tabbar     { order: 1; }
+.terminal-header { order: 2; }
+.terminal-body   { order: 3; }
+
 .terminal-header {
   height: 48px;
   background: rgba(15, 23, 42, 0.9);

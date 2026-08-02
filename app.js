@@ -306,7 +306,7 @@ function addSessionTab(agent, desc) {
   try { term.loadAddon(new WebLinksAddon.WebLinksAddon()); } catch (_) {}
 
   const state = {
-    id: desc.id, agent, label: desc.label, cwd: desc.cwd,
+    id: desc.id, agent, provider: desc.profile || agent, label: desc.label, cwd: desc.cwd,
     term, fit, ws: null, hostEl: host, tabEl, stateDotEl: stateDot,
     status: "connecting", closed: false, retryTimer: null,
     lastOutputAt: 0, lastInputAt: 0, busySince: 0, working: false,
@@ -479,11 +479,7 @@ function updateCardStatus(agent) {
   el.style.backgroundColor = colors[state ? state.status : "connecting"] || "var(--text-dim)";
   el.title = `session: ${state ? state.status : "none"}`;
 
-  const modelLine = document.getElementById(`model-${agent}`);
-  if (modelLine && state) {
-    modelLine.innerText = `${agent} CLI · cwd: ${state.label}`;
-    modelLine.title = state.cwd;
-  }
+  renderLaneToolbar(agent);
 }
 
 function activateTab(agent, id) {
@@ -514,15 +510,16 @@ function resumeSession(agent) {
     return;
   }
   state.lastInputAt = Date.now();
-  if (agent === "claude") {
-    state.ws.send(JSON.stringify({ type: "input", data: "/resume\r" }));
-  } else {
+  const provider = state.provider || agent;
+  if (provider === "gemini" || provider === "agy") {
     if (CONFIG.geminiUsesAgy) {
       state.ws.send(JSON.stringify({ type: "input", data: "/resume\r" }));
     } else {
       state.ws.send(JSON.stringify({ type: "input", data: "/chat list\r" }));
       showToast("Gemini lists saved checkpoints - resume with /chat resume <tag>, save with /chat save <tag>");
     }
+  } else {
+    state.ws.send(JSON.stringify({ type: "input", data: "/resume\r" }));
   }
   state.term.focus();
 }
@@ -740,36 +737,101 @@ const MODELS = {
   ],
 };
 
+// --- Provider identity + the per-tab toolbar (tab-primary layout, 2026-08-02) --------------
+// A lane (card) is just a column; each TAB owns its provider (claude / gemini / codex / a shell).
+// The toolbar under the tab strip reflects the ACTIVE tab's provider -- so a gemini tab opened in
+// the claude lane shows gemini's identity + model list + resume, and Restart re-spawns it as gemini
+// (the server already keys restart off the session's own profile). All DOM writes are guarded, so
+// calling renderLaneToolbar for a lane with no card is a harmless no-op.
+const EFFORT_PROVIDERS = new Set(["claude", "gemini", "agy"]);
+const PROVIDER_NAMES = { claude: "Claude Code", gemini: "Gemini CLI", agy: "Gemini CLI", codex: "Codex CLI" };
+const PROVIDER_ICONS = {
+  claude: { letter: "C", cls: "claude-icon" },
+  gemini: { letter: "G", cls: "gemini-icon" },
+  agy:    { letter: "G", cls: "gemini-icon" },
+  codex:  { letter: "X", cls: "local-icon" },
+};
+
+function isShellProfile(id) {
+  const shells = (CONFIG.shellProfiles || []).map((p) => p.id);
+  return (shells.length ? shells : ["bash", "gitbash", "pwsh"]).includes(id);
+}
+
+function activeProvider(agent) {
+  const st = SESSIONS_UI[ACTIVE_TAB[agent]];
+  return (st && st.provider) || agent;
+}
+
+function providerMeta(provider) {
+  const shell = isShellProfile(provider);
+  let name = PROVIDER_NAMES[provider];
+  if (!name) {
+    const preset = (CONFIG.agentPresets || []).find((p) => p.id === provider);
+    const prof = (CONFIG.shellProfiles || []).find((p) => p.id === provider);
+    name = (preset && preset.label) || (prof && prof.label) || provider;
+  }
+  const icon = PROVIDER_ICONS[provider]
+    || { letter: shell ? ">" : (provider[0] || "?").toUpperCase(), cls: "local-icon" };
+  return { name, letter: icon.letter, cls: icon.cls, isShell: shell };
+}
+
+function renderLaneToolbar(agent) {
+  const state = SESSIONS_UI[ACTIVE_TAB[agent]];
+  const provider = (state && state.provider) || agent;
+  const meta = providerMeta(provider);
+
+  const icon = document.getElementById(`agent-icon-${agent}`);
+  if (icon) { icon.textContent = meta.letter; icon.className = `agent-icon ${meta.cls}`; }
+
+  const nameEl = document.getElementById(`agent-name-text-${agent}`);
+  if (nameEl) nameEl.textContent = meta.name;
+
+  const sub = document.getElementById(`model-${agent}`);
+  if (sub && state) { sub.textContent = `${meta.name} · cwd: ${state.label}`; sub.title = state.cwd; }
+
+  const hasModels = !!MODELS[provider];
+  const modelBtn = document.getElementById(`model-btn-${agent}`);
+  if (modelBtn) { modelBtn.style.display = hasModels ? "" : "none"; if (hasModels) modelBtn.classList.add("set"); }
+  const modelLabel = document.getElementById(`model-label-${agent}`);
+  if (modelLabel && hasModels) modelLabel.textContent = currentModel(provider);
+
+  const hasEffort = EFFORT_PROVIDERS.has(provider);
+  const effortBtn = document.getElementById(`effort-btn-${agent}`);
+  if (effortBtn) { effortBtn.style.display = hasEffort ? "" : "none"; if (hasEffort) effortBtn.classList.add("set"); }
+  const effortLabel = document.getElementById(`effort-label-${agent}`);
+  if (effortLabel && hasEffort) effortLabel.textContent = currentEffort(provider);
+
+  const resumeBtn = document.getElementById(`resume-btn-${agent}`);
+  if (resumeBtn) resumeBtn.style.display = meta.isShell ? "none" : "";
+}
+
 function currentModel(agent) {
   return localStorage.getItem(`harness-model-${agent}`)
     || (MODELS[agent] && MODELS[agent][0].label) || "model";
 }
 
 function renderModelLabels() {
-  for (const agent of Object.keys(MODELS)) {
-    const el = document.getElementById(`model-label-${agent}`);
-    if (el) el.innerText = currentModel(agent);
-    const btn = document.getElementById(`model-btn-${agent}`);
-    if (btn) btn.classList.add("set");
-  }
+  for (const agent of (CONFIG.agents || ["claude", "gemini"])) renderLaneToolbar(agent);
 }
 
 function showModelMenu(agent, anchor) {
+  const provider = activeProvider(agent);
+  if (!MODELS[provider]) { showToast(`${providerMeta(provider).name}: no model switch`, "error"); return; }
   dismissTabMenu();
   const menu = document.createElement("div");
   menu.className = "tab-menu";
   menu.id = "tab-menu";
   const title = document.createElement("div");
   title.className = "tab-menu-title";
-  title.innerText = `${agent} model`;
+  title.innerText = `${providerMeta(provider).name} model`;
   menu.appendChild(title);
-  const cur = currentModel(agent);
-  for (const m of MODELS[agent] || []) {
+  const cur = currentModel(provider);
+  for (const m of MODELS[provider] || []) {
     const item = document.createElement("div");
     const on = m.label === cur;
     item.className = "tab-menu-item" + (on ? " model-current" : "");
     item.innerText = (on ? "◆ " : "◇ ") + m.label;
-    item.addEventListener("click", () => { dismissTabMenu(); selectModel(agent, m); });
+    item.addEventListener("click", () => { dismissTabMenu(); selectModel(agent, provider, m); });
     menu.appendChild(item);
   }
   document.body.appendChild(menu);
@@ -779,17 +841,17 @@ function showModelMenu(agent, anchor) {
   setTimeout(() => document.addEventListener("click", dismissTabMenuOnce, { once: true }), 0);
 }
 
-function selectModel(agent, m) {
-  localStorage.setItem(`harness-model-${agent}`, m.label);
-  renderModelLabels();
+function selectModel(agent, provider, m) {
+  localStorage.setItem(`harness-model-${provider}`, m.label);
+  renderLaneToolbar(agent);
   pushFocusState();
   const state = SESSIONS_UI[ACTIVE_TAB[agent]];
   if (state && state.ws && state.ws.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify({ type: "input", data: `/model ${m.alias}` }));   // no Enter -- operator confirms
     state.term.focus();
-    showToast(`${agent} model -> ${m.label}: /model ${m.alias} staged - Enter to apply`);
+    showToast(`${provider} model -> ${m.label}: /model ${m.alias} staged - Enter to apply`);
   } else {
-    showToast(`${agent} model set to ${m.label} (no live session to apply to)`, "error");
+    showToast(`${provider} model set to ${m.label} (no live session to apply to)`, "error");
   }
 }
 
@@ -808,12 +870,7 @@ function currentEffort(agent = "claude") {
 }
 
 function renderEffortLabel(agent = "claude") {
-  for (const a of ["claude", "gemini"]) {
-    const el = document.getElementById(`effort-label-${a}`);
-    if (el) el.innerText = currentEffort(a);
-    const btn = document.getElementById(`effort-btn-${a}`);
-    if (btn) btn.classList.add("set");
-  }
+  for (const a of (CONFIG.agents || ["claude", "gemini"])) renderLaneToolbar(a);
 }
 
 function showEffortMenu(agentOrAnchor, anchor) {
@@ -825,21 +882,23 @@ function showEffortMenu(agentOrAnchor, anchor) {
   } else {
     targetAnchor = agentOrAnchor;
   }
+  const provider = activeProvider(agent);
+  if (!EFFORT_PROVIDERS.has(provider)) { showToast(`${providerMeta(provider).name}: no effort control`, "error"); return; }
   dismissTabMenu();
   const menu = document.createElement("div");
   menu.className = "tab-menu";
   menu.id = "tab-menu";
   const title = document.createElement("div");
   title.className = "tab-menu-title";
-  title.innerText = `${agent} effort (/effort)`;
+  title.innerText = `${providerMeta(provider).name} effort (/effort)`;
   menu.appendChild(title);
-  const cur = currentEffort(agent);
+  const cur = currentEffort(provider);
   for (const e of EFFORTS) {
     const item = document.createElement("div");
     const on = e.label === cur;
     item.className = "tab-menu-item" + (on ? " model-current" : "");
     item.innerText = (on ? "◆ " : "◇ ") + e.label + (e.note ? `  (${e.note})` : "");
-    item.addEventListener("click", () => { dismissTabMenu(); selectEffort(agent, e); });
+    item.addEventListener("click", () => { dismissTabMenu(); selectEffort(agent, provider, e); });
     menu.appendChild(item);
   }
   document.body.appendChild(menu);
@@ -849,24 +908,17 @@ function showEffortMenu(agentOrAnchor, anchor) {
   setTimeout(() => document.addEventListener("click", dismissTabMenuOnce, { once: true }), 0);
 }
 
-function selectEffort(agentOrObj, eObj) {
-  let agent = "claude";
-  let e = eObj;
-  if (typeof agentOrObj === "string") {
-    agent = agentOrObj;
-  } else {
-    e = agentOrObj;
-  }
-  localStorage.setItem(`harness-effort-${agent}`, e.label);
-  renderEffortLabel(agent);
+function selectEffort(agent, provider, e) {
+  localStorage.setItem(`harness-effort-${provider}`, e.label);
+  renderLaneToolbar(agent);
   pushFocusState();
   const state = SESSIONS_UI[ACTIVE_TAB[agent]];
   if (state && state.ws && state.ws.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify({ type: "input", data: `/effort ${e.alias}` }));   // no Enter -- operator confirms
     state.term.focus();
-    showToast(`${agent} effort -> ${e.label}: /effort ${e.alias} staged - Enter to apply`);
+    showToast(`${provider} effort -> ${e.label}: /effort ${e.alias} staged - Enter to apply`);
   } else {
-    showToast(`${agent} effort set to ${e.label} (no live ${agent} session to apply to)`, "error");
+    showToast(`${provider} effort set to ${e.label} (no live ${provider} session to apply to)`, "error");
   }
 }
 

@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="vendor/xterm.min.css">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260802a">
 </head>
 <body>
 
@@ -108,9 +108,9 @@
         <div class="terminal-card claude-card">
           <div class="terminal-header">
             <div class="agent-info">
-              <div class="agent-icon claude-icon">C</div>
+              <div class="agent-icon claude-icon" id="agent-icon-claude">C</div>
               <div>
-                <div class="agent-name">Claude Code
+                <div class="agent-name"><span id="agent-name-text-claude">Claude Code</span>
                   <span class="term-status" id="status-claude" title="session status"></span>
                 </div>
                 <div class="agent-model" id="model-claude">claude CLI &middot; cwd: ~ &middot; <span class="token-badge" id="token-badge-claude" style="color:#38bdf8; font-family:var(--font-mono);" title="Approximate session context window fill %">Context: ~15% (30k)</span></div>
@@ -118,8 +118,8 @@
             </div>
             <div class="term-actions">
               <button class="btn-xs model-btn" id="model-btn-claude" onclick="showModelMenu('claude', event.currentTarget)" title="Switch this session's model (stages /model at the prompt)">&#9670; <span id="model-label-claude">Opus 4.8</span> &#9662;</button>
-              <button class="btn-xs effort-btn" id="effort-btn-claude" onclick="showEffortMenu(event.currentTarget)" title="Set Claude's reasoning effort (/effort). Extra/Max push hardest and use more usage; High or below for routine work. Stages the command - you Enter to apply.">&#9889; <span id="effort-label-claude">High</span> &#9662;</button>
-              <button class="btn-xs" onclick="resumeSession('claude')" title="Open Claude Code's past-session picker (/resume)">&#8635; Resume</button>
+              <button class="btn-xs effort-btn" id="effort-btn-claude" onclick="showEffortMenu('claude', event.currentTarget)" title="Set Claude's reasoning effort (/effort). Extra/Max push hardest and use more usage; High or below for routine work. Stages the command - you Enter to apply.">&#9889; <span id="effort-label-claude">High</span> &#9662;</button>
+              <button class="btn-xs" id="resume-btn-claude" onclick="resumeSession('claude')" title="Open Claude Code's past-session picker (/resume)">&#8635; Resume</button>
               <button class="btn-xs" onclick="showPathMenu('claude', event.currentTarget)" title="Pick file/folder paths in Explorer and insert them at the prompt">&#128193; Paths</button>
               <button class="mic-btn mic-btn-sm" id="mic-btn-claude" onclick="toggleDictation({btnId:'mic-btn-claude', agent:'claude'})" title="Dictate into this Claude pane -- click to start, click again to stop. Local Whisper; stages at the prompt for you to Enter.">&#127908;</button>
               <button class="btn-xs" onclick="screenshotTerminal('claude')" title="Copy a screenshot of this terminal to the clipboard">&#128247; Screenshot</button>
@@ -140,9 +140,9 @@
         <div class="terminal-card gemini-card">
           <div class="terminal-header">
             <div class="agent-info">
-              <div class="agent-icon gemini-icon">G</div>
+              <div class="agent-icon gemini-icon" id="agent-icon-gemini">G</div>
               <div>
-                <div class="agent-name">Gemini CLI
+                <div class="agent-name"><span id="agent-name-text-gemini">Gemini CLI</span>
                   <span class="term-status" id="status-gemini" title="session status"></span>
                 </div>
                 <div class="agent-model" id="model-gemini">gemini CLI &middot; cwd: ~ &middot; <span class="token-badge" id="token-badge-gemini" style="color:#38bdf8; font-family:var(--font-mono);" title="Approximate session context window fill %">Context: ~12% (24k)</span></div>
@@ -151,7 +151,7 @@
             <div class="term-actions">
               <button class="btn-xs model-btn" id="model-btn-gemini" onclick="showModelMenu('gemini', event.currentTarget)" title="Switch this session's model (stages /model at the prompt)">&#9670; <span id="model-label-gemini">Gemini 3.6 Flash</span> &#9662;</button>
               <button class="btn-xs effort-btn" id="effort-btn-gemini" onclick="showEffortMenu('gemini', event.currentTarget)" title="Set Gemini's reasoning effort (/effort low|medium|high). Stages the command - you Enter to apply.">&#9889; <span id="effort-label-gemini">High</span> &#9662;</button>
-              <button class="btn-xs" onclick="resumeSession('gemini')" title="List Gemini's saved checkpoints (/chat list); resume with /chat resume <tag>">&#8635; Resume</button>
+              <button class="btn-xs" id="resume-btn-gemini" onclick="resumeSession('gemini')" title="List Gemini's saved checkpoints (/chat list); resume with /chat resume <tag>">&#8635; Resume</button>
               <button class="btn-xs" onclick="showPathMenu('gemini', event.currentTarget)" title="Pick file/folder paths in Explorer and insert them at the prompt">&#128193; Paths</button>
               <button class="mic-btn mic-btn-sm" id="mic-btn-gemini" onclick="toggleDictation({btnId:'mic-btn-gemini', agent:'gemini'})" title="Dictate into this Gemini pane -- click to start, click again to stop. Local Whisper; stages at the prompt for you to Enter.">&#127908;</button>
               <button class="btn-xs" onclick="screenshotTerminal('gemini')" title="Copy a screenshot of this terminal to the clipboard">&#128247; Screenshot</button>
@@ -248,7 +248,7 @@
   <script src="vendor/addon-canvas.min.js"></script>
   <script src="vendor/addon-search.min.js"></script>
   <script src="vendor/addon-web-links.min.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=20260802a"></script>
   <script>
     /* Suppress browser autofill (password/card/address prompts) on the harness's
        own command/path inputs -- they are not a login or payment form. */
