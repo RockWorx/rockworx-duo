@@ -28,6 +28,8 @@
 }
 .wv-title { font-size: 12px; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; }
 .wv-card canvas { width: 100%; height: 220px; display: block; }
+.wv-3d-card canvas { height: 320px; cursor: grab; }
+.wv-3d-card canvas:active { cursor: grabbing; }
 
 .wv-table { font-family: var(--font-mono, monospace); font-size: 12px; }
 .wv-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid #131e33; }

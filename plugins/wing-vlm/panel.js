@@ -86,6 +86,104 @@ function wvPlanform(canvas, geo) {
   g.fillText("b = " + geo.span + " m", W / 2, H - 12);
 }
 
+// --- interactive 3-D wing: a lofted mesh drawn on canvas-2D (painter's algorithm, no WebGL) -------
+// A wing is a small surface, so we skip shaders: build quads between airfoil sections, rotate with the
+// orbit angles, sort back-to-front, and fill each by the local lift colour. Self-contained + CSP-clean.
+const WV3 = { yaw: -0.7, pitch: 0.42, zoom: 1.0, mesh: null, drag: false, lx: 0, ly: 0, attached: false };
+
+function wvInterp1(xs, ys, x0) {
+  if (x0 <= xs[0]) return ys[0];
+  if (x0 >= xs[xs.length - 1]) return ys[ys.length - 1];
+  let i = 0; while (i < xs.length - 1 && xs[i + 1] < x0) i++;
+  const denom = xs[i + 1] - xs[i];
+  const t = denom ? (x0 - xs[i]) / denom : 0;
+  return ys[i] + t * (ys[i + 1] - ys[i]);
+}
+
+function wvLiftColor(v) {
+  v = Math.max(0, Math.min(1, v));
+  return "hsl(" + Math.round((1 - v) * 240) + ",80%,55%)";   // blue (low) -> red (high)
+}
+
+function wvBuildMesh(d) {
+  const G = d.geometry, coords = d.coords, L = d.loading;
+  const s = G.span / 2, N = 16, K = coords.x.length;
+  const section = (t, sign) => {
+    const c = G.root_chord + (G.tip_chord - G.root_chord) * t;
+    const xle = G.xle_tip * t, y = sign * s * t, zle = G.zle_tip * t;
+    const p = [];
+    for (let k = 0; k < K; k++) p.push([xle + c * coords.x[k], y, zle + c * coords.y[k]]);
+    return p;
+  };
+  const quads = [];
+  let xmin = 1e9, xmax = -1e9, zmin = 1e9, zmax = -1e9;
+  for (const sign of [1, -1]) {
+    let prev = section(0, sign);
+    for (let i = 1; i <= N; i++) {
+      const t = i / N, tm = (i - 0.5) / N;
+      const cur = section(t, sign);
+      const col = wvLiftColor(wvInterp1(L.y_over_s, L.L_norm, tm));   // loading is symmetric; +t is fine
+      for (let k = 0; k < K - 1; k++) quads.push({ v: [prev[k], prev[k + 1], cur[k + 1], cur[k]], c: col });
+      for (const pt of cur) {
+        if (pt[0] < xmin) xmin = pt[0]; if (pt[0] > xmax) xmax = pt[0];
+        if (pt[2] < zmin) zmin = pt[2]; if (pt[2] > zmax) zmax = pt[2];
+      }
+      prev = cur;
+    }
+  }
+  return { quads, center: [(xmin + xmax) / 2, 0, (zmin + zmax) / 2], radius: Math.max(s, (xmax - xmin) / 2, 1e-6) };
+}
+
+function wvRender3D() {
+  const canvas = document.getElementById("wv-3d");
+  if (!canvas || !WV3.mesh) return;
+  const { g, W, H } = wvSize(canvas);
+  const m = WV3.mesh, C = m.center;
+  const cy = Math.cos(WV3.yaw), sy = Math.sin(WV3.yaw), cp = Math.cos(WV3.pitch), sp = Math.sin(WV3.pitch);
+  const scale = WV3.zoom * 0.42 * Math.min(W, H) / m.radius;
+  const tf = (p) => {
+    const x = p[0] - C[0], y = p[1] - C[1], z = p[2] - C[2];
+    const x1 = x * cy - y * sy, y1 = x * sy + y * cy;
+    const y2 = y1 * cp - z * sp, z2 = y1 * sp + z * cp;
+    return [W / 2 + x1 * scale, H / 2 - z2 * scale, y2];   // [screenX, screenY, depth]
+  };
+  const faces = m.quads.map((q) => {
+    const p = [tf(q.v[0]), tf(q.v[1]), tf(q.v[2]), tf(q.v[3])];
+    return { p: p, c: q.c, depth: (p[0][2] + p[1][2] + p[2][2] + p[3][2]) / 4 };
+  });
+  faces.sort((a, b) => b.depth - a.depth);   // farthest first (painter's algorithm)
+  g.lineJoin = "round";
+  for (const f of faces) {
+    g.beginPath(); g.moveTo(f.p[0][0], f.p[0][1]);
+    for (let i = 1; i < 4; i++) g.lineTo(f.p[i][0], f.p[i][1]);
+    g.closePath();
+    g.fillStyle = f.c; g.strokeStyle = "rgba(2,6,20,0.35)"; g.lineWidth = 0.5;
+    g.fill(); g.stroke();
+  }
+  g.fillStyle = "#64748b"; g.font = "10px monospace"; g.textAlign = "left"; g.textBaseline = "bottom";
+  g.fillText("lift: low (blue) -> high (red)  ·  drag to orbit, scroll to zoom", 10, H - 8);
+}
+
+function wv3dAttach() {
+  const canvas = document.getElementById("wv-3d");
+  if (!canvas || WV3.attached) return;
+  WV3.attached = true;
+  canvas.addEventListener("mousedown", (e) => { WV3.drag = true; WV3.lx = e.clientX; WV3.ly = e.clientY; });
+  window.addEventListener("mouseup", () => { WV3.drag = false; });
+  window.addEventListener("mousemove", (e) => {
+    if (!WV3.drag) return;
+    WV3.yaw += (e.clientX - WV3.lx) * 0.01;
+    WV3.pitch = Math.max(-1.5, Math.min(1.5, WV3.pitch + (e.clientY - WV3.ly) * 0.01));
+    WV3.lx = e.clientX; WV3.ly = e.clientY;
+    wvRender3D();
+  });
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    WV3.zoom = Math.max(0.3, Math.min(6, WV3.zoom * Math.exp(-e.deltaY * 0.0012)));
+    wvRender3D();
+  }, { passive: false });
+}
+
 function wvTable(el, rows) {
   if (!el) return;
   el.textContent = "";
@@ -156,6 +254,8 @@ async function wvAnalyze() {
     stab.push(["Static margin", S.static_margin_pctMAC + " %MAC", S.static_margin_pctMAC >= 0 ? "good" : "bad"]);
   }
   wvTable(document.getElementById("wv-stab"), stab);
+  WV3.mesh = wvBuildMesh(d);
+  wvRender3D();
 }
 
 Harness.registerPanel("wing-vlm", {
@@ -167,6 +267,7 @@ Harness.registerPanel("wing-vlm", {
         .forEach((id) => { const e = document.getElementById(id); if (e) e.addEventListener("keydown", (ev) => { if (ev.key === "Enter") wvAnalyze(); }); });
       WV_WIRED = true;
     }
+    wv3dAttach();
     let st;
     try { st = await Harness.api("/api/plugin/wing-vlm/status"); }
     catch (e) { st = { available: false }; }

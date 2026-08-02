@@ -98,6 +98,11 @@ def analyze(params):
     except Exception:
         return {"error": "unknown airfoil '%s' -- try a NACA code (naca2412, naca0012) or a UIUC name" % airfoil}
 
+    _c = np.array(af.coordinates, dtype=float)          # decimated section, for the frontend 3-D loft
+    _step = max(1, len(_c) // 60)
+    af_coords = {"x": [round(float(x), 5) for x in _c[::_step, 0]],
+                 "y": [round(float(y), 5) for y in _c[::_step, 1]]}
+
     wing = asb.Wing(name="wing", symmetric=True, xsecs=[
         asb.WingXSec(xyz_le=[0, 0, 0], chord=root, airfoil=af, twist=0),
         asb.WingXSec(xyz_le=[xle_tip, b / 2.0, zle_tip], chord=tip, airfoil=af, twist=twist),
@@ -138,11 +143,12 @@ def analyze(params):
 
     out = {
         "airfoil": airfoil,
+        "coords": af_coords,
         "geometry": {
             "S": round(S, 4), "AR": round(AR, 3), "span": round(span, 3), "mac": round(mac, 4),
             "root_chord": round(root, 4), "tip_chord": round(tip, 4), "taper": round(taper, 3),
             "sweep_c4": round(sweep, 2), "dihedral": round(dih, 2), "twist_tip": round(twist, 2),
-            "xle_tip": round(xle_tip, 4),
+            "xle_tip": round(xle_tip, 4), "zle_tip": round(zle_tip, 4),
         },
         "aero": {
             "alpha": round(alpha, 2), "velocity": round(V, 2),
