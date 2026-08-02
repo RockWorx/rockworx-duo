@@ -1653,7 +1653,7 @@ function renderNotifyButton() {
 
 // --- Transcript export --------------------------------------------------------
 
-function exportTranscript(agent) {
+async function exportTranscript(agent) {
   const state = SESSIONS_UI[ACTIVE_TAB[agent]];
   if (!state) { showToast(`${agent}: no session`, "error"); return; }
   const buf = state.term.buffer.active;
@@ -1666,12 +1666,30 @@ function exportTranscript(agent) {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   // UTF-8 BOM so Notepad decodes box-drawing characters correctly.
   const blob = new Blob(["﻿", text], { type: "text/plain;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${agent}-${state.label}-${stamp}.txt`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  showToast(`Transcript downloaded (${buf.length} lines)`);
+  const provider = state.provider || agent;
+  const filename = `${provider}-transcript-${stamp}.txt`;
+  const download = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  };
+  // Default: save the transcript INTO the tab's working (project) directory via the server (jailed
+  // under home). Fall back to a browser download so the transcript is never lost -- and so it still
+  // works before the server is restarted with the /api/transcript endpoint.
+  try {
+    const res = await apiFetch("/api/transcript", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cwd: state.cwd, filename, text }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
+    showToast(`Transcript saved to ${data.path}`);
+  } catch (e) {
+    download();
+    showToast(`Saved to Downloads (project-dir save failed: ${e.message})`, "error");
+  }
 }
 
 // --- Named layouts -------------------------------------------------------------

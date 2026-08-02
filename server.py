@@ -1069,6 +1069,26 @@ def api_create_project(payload):
     return {"project": pj}
 
 
+def api_save_transcript(payload):
+    """Write a session transcript into its working (project) directory, jailed under ROOT_DIR.
+    The browser cannot write arbitrary paths, so the Transcript button POSTs the terminal text here
+    and the server saves it next to the work (with a client-side download fallback if this fails)."""
+    if not isinstance(payload, dict):
+        raise ValueError("body must be an object")
+    cwd = safe_under_home(payload.get("cwd") or DEFAULT_CWD)
+    if not cwd.is_dir():
+        raise FileNotFoundError(f"not a directory: {cwd}")
+    name = Path(str(payload.get("filename", "")).strip()).name or "transcript.txt"   # basename only
+    if not name.lower().endswith(".txt"):
+        name += ".txt"
+    text = payload.get("text", "")
+    if not isinstance(text, str):
+        raise ValueError("text must be a string")
+    target = safe_under_home(cwd / name)   # re-jail the joined path (defense-in-depth)
+    target.write_text(text, encoding="utf-8")
+    return {"path": str(target)}
+
+
 def api_plugins(_params):
     """The loaded-plugin manifest list for the frontend to build tabs (with asset URLs)."""
     return {"plugins": [
@@ -1287,6 +1307,8 @@ class HarnessHandler(SimpleHTTPRequestHandler):
                 return self._send_json(save_harness_state(payload))
             if parsed.path == "/api/project/create":
                 return self._send_json(api_create_project(payload))
+            if parsed.path == "/api/transcript":
+                return self._send_json(api_save_transcript(payload))
             if parsed.path in PLUGIN_ROUTES_POST:
                 return self._send_json(PLUGIN_ROUTES_POST[parsed.path](payload))
             return self._send_json({"error": "unknown endpoint"}, 404)
