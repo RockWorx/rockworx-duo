@@ -1,0 +1,41 @@
+/* Wing / VLM panel -- planform + lift-distribution canvases and result tables. */
+.wv-wrap {
+  width: 100%; max-width: 1100px; margin: 0 auto;
+  display: flex; flex-direction: column; min-height: 0; gap: 12px;
+  padding: 10px 6px 6px; box-sizing: border-box; overflow-y: auto;
+}
+.wv-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.wv-controls label { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #94a3b8; }
+.wv-controls input { width: 54px; padding: 6px 7px; background: #0b1120; border: 1px solid #22314d; border-radius: 6px; color: #e2e8f0; }
+#wv-airfoil { width: 84px; }
+#wv-run { padding: 8px 16px; border-radius: 6px; cursor: pointer; background: #0284c7; color: #fff; border: none; font-weight: 600; }
+#wv-run:hover { background: #0ea5e9; }
+.wv-status { font-size: 12px; opacity: 0.85; font-family: var(--font-mono, monospace); }
+
+.wv-install {
+  background: #17233c; border: 1px solid #334155; border-radius: 8px; padding: 16px 18px;
+  color: #e6edf6; line-height: 1.6;
+}
+.wv-install code {
+  display: inline-block; margin-top: 8px; background: #0b1120; padding: 6px 10px; border-radius: 4px;
+  font-family: var(--font-mono, monospace); font-size: 12px; color: #7dd3fc;
+}
+
+.wv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.wv-card {
+  background: #0b1120; border: 1px solid #22314d; border-radius: 8px; padding: 10px;
+  display: flex; flex-direction: column; min-width: 0;
+}
+.wv-title { font-size: 12px; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; }
+.wv-card canvas { width: 100%; height: 220px; display: block; }
+
+.wv-table { font-family: var(--font-mono, monospace); font-size: 12px; }
+.wv-row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid #131e33; }
+.wv-row:last-child { border-bottom: none; }
+.wv-k { color: #94a3b8; }
+.wv-v { color: #e2e8f0; text-align: right; }
+.wv-v.good { color: #34d399; }
+.wv-v.bad { color: #f87171; }
+
+.wv-note { font-size: 11px; color: #94a3b8; line-height: 1.5; border-top: 1px solid #22314d; padding-top: 10px; }
+.wv-note b { color: #cbd5e1; }

@@ -1,0 +1,34 @@
+<div class="wv-wrap">
+  <div class="wv-controls">
+    <label>Span b <input id="wv-span" type="text" value="8" autocomplete="off"></label>
+    <label>Root chord <input id="wv-root" type="text" value="1.0" autocomplete="off"></label>
+    <label>Taper <input id="wv-taper" type="text" value="0.5" autocomplete="off"></label>
+    <label>Sweep c/4 <input id="wv-sweep" type="text" value="0" autocomplete="off"> deg</label>
+    <label>Dihedral <input id="wv-dihedral" type="text" value="0" autocomplete="off"> deg</label>
+    <label>Tip twist <input id="wv-twist" type="text" value="0" autocomplete="off"> deg</label>
+    <label>Airfoil <input id="wv-airfoil" type="text" value="naca2412" autocomplete="off" spellcheck="false"></label>
+    <label>&alpha; <input id="wv-alpha" type="text" value="5" autocomplete="off"> deg</label>
+    <label>V <input id="wv-velocity" type="text" value="50" autocomplete="off"> m/s</label>
+    <label>CG <input id="wv-cg" type="text" placeholder="opt" autocomplete="off"> %MAC</label>
+    <button id="wv-run" type="button">Analyze wing</button>
+    <span id="wv-status" class="wv-status"></span>
+  </div>
+
+  <div id="wv-install" class="wv-install" style="display:none;"></div>
+
+  <div id="wv-body" class="wv-body" style="display:none;">
+    <div class="wv-grid">
+      <div class="wv-card"><div class="wv-title">Planform (top view)</div><canvas id="wv-planform"></canvas></div>
+      <div class="wv-card"><div class="wv-title">Spanwise lift distribution</div><canvas id="wv-loading"></canvas></div>
+      <div class="wv-card"><div class="wv-title">Geometry</div><div id="wv-geo" class="wv-table"></div></div>
+      <div class="wv-card"><div class="wv-title">Aerodynamics (VLM, inviscid)</div><div id="wv-aero" class="wv-table"></div></div>
+      <div class="wv-card"><div class="wv-title">Stability</div><div id="wv-stab" class="wv-table"></div></div>
+    </div>
+    <div class="wv-note">
+      Vortex-Lattice Method (AeroSandbox) -- <b>inviscid</b>: lift, <b>induced</b> drag, load distribution,
+      and stability. It does NOT include profile drag -- pair with <b>Airfoil Lab</b> for that. Span
+      efficiency e = C<sub>L</sub>&sup2; / (&pi; &middot; AR &middot; C<sub>Di</sub>); neutral point and
+      static margin are for the wing alone (SM &gt; 0 = statically stable).
+    </div>
+  </div>
+</div>

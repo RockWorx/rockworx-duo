@@ -1,0 +1,7 @@
+{
+  "id": "wing-vlm",
+  "name": "Wing / VLM",
+  "tab": { "label": "Wing / VLM", "icon": "🛩" },
+  "frontend": { "panel": "panel.html", "script": "panel.js", "style": "panel.css" },
+  "backend": "backend.py"
+}

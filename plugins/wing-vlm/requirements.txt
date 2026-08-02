@@ -1,0 +1,8 @@
+# Wing / VLM's OWN optional dependency (NOT part of the dependency-light harness core).
+# AeroSandbox provides the Vortex-Lattice Method and the wing geometry engine (it pulls numpy + scipy +
+# casadi). Install into the SAME Python environment the harness runs in:
+#
+#   pip install -r plugins/wing-vlm/requirements.txt
+#
+# ...then restart the harness. Until it is installed, the Wing / VLM tab shows this same hint.
+aerosandbox>=4.2
