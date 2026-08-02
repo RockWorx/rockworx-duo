@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
-# Launch RockWorx Duo (POSIX). Requires python 3.10+.
+# Re-launch RockWorx Duo (macOS / Linux). Run ./install.sh first (creates .venv + installs deps).
 cd "$(dirname "$0")" || exit 1
-exec python3 server.py "$@"
+if [ -x .venv/bin/python ]; then
+  exec .venv/bin/python server.py "$@"
+else
+  echo "No environment found -- run ./install.sh first. Falling back to system python3..."
+  exec python3 server.py "$@"
+fi

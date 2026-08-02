@@ -23,10 +23,20 @@ through a simple **plugin** seam, so the core stays generic.
 
 ## Quickstart
 
-Requirements: Python 3.10+. Then `pip install -r requirements.txt` (installs `websockets`, plus
-`pywinpty` on Windows or `ptyprocess` on macOS/Linux).
+### Easiest -- no command line
+
+1. Download the code: the green **Code** button above -> **Download ZIP**, then unzip it.
+2. **Windows:** double-click **`install.bat`**.  **macOS / Linux:** run **`./install.sh`**.
+   It creates a private environment, installs everything, and opens RockWorx Duo in your browser.
+   (The first run will offer to install Python if you don't already have it.)
+3. Next time, just use **`launch.bat`** (Windows) / **`./launch.sh`** (macOS/Linux).
+
+### Manual (developers)
+
+Requirements: Python 3.10+.
 
 ```bash
+pip install -r requirements.txt   # websockets, + pywinpty (Windows) / ptyprocess (macOS/Linux)
 cp harness.config.example.json harness.config.json   # optional; edit provider presets
 python server.py
 ```
