@@ -7,3 +7,4 @@ harness.config.json
 _scrollback/
 *.log
 .DS_Store
+.harness_state.json
