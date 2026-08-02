@@ -1,9 +1,46 @@
-.lm-wrap { display: flex; flex-direction: column; height: 100%; gap: 8px; padding: 12px; box-sizing: border-box; }
-.lm-bar { display: flex; align-items: center; gap: 8px; }
+/* Local Models panel -- a centered, full-height chat column that uses the panel width
+   (the view-panel is display:flex row, so margin:auto centers this and align stretches height). */
+.lm-wrap {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 10px;
+  padding: 8px 4px 4px;
+  box-sizing: border-box;
+}
+.lm-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#lm-model { flex: 1 1 auto; min-width: 0; max-width: 480px; padding: 6px 8px; }
 .lm-status { opacity: 0.7; font-size: 12px; }
-.lm-log { flex: 1; overflow: auto; border: 1px solid #223; border-radius: 6px; padding: 8px; background: #0b1120; }
-.lm-u { color: #8ab; margin: 6px 0; white-space: pre-wrap; }
-.lm-a { color: #cde; margin: 6px 0; white-space: pre-wrap; }
-.lm-err { color: #e88; }
+
+.lm-log {
+  flex: 1;
+  min-height: 0;               /* required so the log scrolls inside the flex column */
+  overflow-y: auto;
+  border: 1px solid #22314d;
+  border-radius: 8px;
+  padding: 14px;
+  background: #0b1120;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lm-msg {
+  max-width: 85%;
+  padding: 9px 13px;
+  border-radius: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.lm-u   { align-self: flex-end;   background: #1d3a5f; color: #dbeafe; border-bottom-right-radius: 4px; }
+.lm-a   { align-self: flex-start; background: #17233c; color: #e6edf6; border-bottom-left-radius: 4px; }
+.lm-err { align-self: flex-start; background: #3a1620; color: #f7b4b4; }
+.lm-pending { align-self: flex-start; background: #17233c; color: #9fb4d0; font-style: italic; }
+
 .lm-form { display: flex; gap: 8px; }
-#lm-input { flex: 1; }
+#lm-input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 8px; }
+.lm-form button { padding: 10px 18px; border-radius: 8px; cursor: pointer; }

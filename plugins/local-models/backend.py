@@ -35,7 +35,7 @@ def _get_json(url, timeout=10):
         return json.loads(r.read().decode("utf-8"))
 
 
-def _post_json(url, payload, timeout=120):
+def _post_json(url, payload, timeout=600):  # local models can be slow; generous so long answers don't time out
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:

@@ -2,11 +2,16 @@
 // The two API calls go through the plugin route via Harness.api() (returns parsed JSON). Loaded once
 // by the plugin loader, so these functions are global and the panel's ids resolve via getElementById.
 
-const _lmEsc = (s) => (window.escapeHtml
-  ? window.escapeHtml(String(s))
-  : String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])));
-
 let LM_LOADED = false;
+
+function _lmAppend(log, cls, text) {
+  const d = document.createElement("div");
+  d.className = "lm-msg " + cls;
+  d.textContent = text;   // textContent = XSS-safe; CSS white-space:pre-wrap preserves formatting
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+  return d;
+}
 
 async function lmLoadModels() {
   const sel = document.getElementById("lm-model");
@@ -22,7 +27,7 @@ async function lmLoadModels() {
       o.value = o.textContent = m.id;
       sel.appendChild(o);
     }
-    if (status) status.textContent = list.length + " model(s)";
+    if (status) status.textContent = list.length + " model(s)" + (data.base ? " @ " + data.base.replace(/^https?:\/\//, "") : "");
   } catch (err) {
     sel.innerHTML = "<option>(no local server)</option>";
     if (status) status.textContent = "start Ollama or LM Studio";
@@ -37,8 +42,8 @@ async function lmSend(ev) {
   const msg = input.value.trim();
   if (!msg) return;
   input.value = "";
-  log.innerHTML += '<div class="lm-u">' + _lmEsc(msg) + "</div>";
-  log.scrollTop = log.scrollHeight;
+  _lmAppend(log, "lm-u", msg);
+  const pending = _lmAppend(log, "lm-pending", "thinking…");   // replaced in place with the reply
   try {
     const res = await Harness.api("/api/plugin/local-models/chat", {
       method: "POST",
@@ -48,9 +53,11 @@ async function lmSend(ev) {
     if (res.error) throw new Error(res.error);
     const txt = (res.choices && res.choices[0] && res.choices[0].message
       && res.choices[0].message.content) || "(no response)";
-    log.innerHTML += '<div class="lm-a">' + _lmEsc(txt) + "</div>";
+    pending.className = "lm-msg lm-a";
+    pending.textContent = txt;
   } catch (err) {
-    log.innerHTML += '<div class="lm-a lm-err">error: ' + _lmEsc(err.message) + "</div>";
+    pending.className = "lm-msg lm-err";
+    pending.textContent = "error: " + err.message;
   }
   log.scrollTop = log.scrollHeight;
 }
