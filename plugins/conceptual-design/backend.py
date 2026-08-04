@@ -79,6 +79,12 @@ def size(params):
     ecls = str(_one(params, "empty_class", "GA single-engine"))
     A, C = EMPTY_CLASSES.get(ecls, EMPTY_CLASSES["GA single-engine"])
 
+    # constraint-diagram assumptions (drag polar + climb/takeoff field length)
+    cd0 = max(0.005, _num(params, "cd0", 0.025))              # parasite (zero-lift) drag coeff
+    e_osw = min(max(_num(params, "oswald_e", 0.80), 0.5), 1.0)  # Oswald span efficiency
+    roc_fpm = max(0.0, _num(params, "roc_fpm", 800.0))       # sea-level rate of climb [ft/min]
+    to_roll_ft = max(100.0, _num(params, "takeoff_roll_ft", 1500.0))  # takeoff ground roll [ft]
+
     atm = isa(alt_ft * FT)
     V = spd * atm["a"] if spd_type == "mach" else spd * KT     # cruise TAS [m/s]
     mach = V / atm["a"]
@@ -136,6 +142,59 @@ def size(params):
     tw_cruise = thrust_req / W_N
     power_req_hp = (thrust_req * V / eta_p) / HP if prop_type == "prop" else None
 
+    # --- constraint / matching diagram: installed T/W (jet) or P/W (prop) required vs W/S -----------
+    # Each flight-condition constraint gives a required thrust-to-TO-weight (twc, no lapse); jets show it
+    # as installed sea-level T/W (divide by thrust lapse); props convert to installed SL power loading
+    # P/W [hp/lb] at each constraint's own speed + density (power lapses ~ sigma). Feasible = above every
+    # curve AND left of the stall line. Standard set (Raymer/Mattingly), first-order.
+    is_jet = prop_type == "jet"
+    Kd = 1.0 / (math.pi * ar * e_osw)                          # induced-drag factor 1/(pi AR e)
+    maxld_polar = 0.5 * math.sqrt(math.pi * ar * e_osw / cd0)  # polar-implied (L/D)max cross-check
+    beta_cr = seg["takeoff"] * seg["climb"]                    # weight fraction at start of cruise
+    sigma_cr = atm["rho"] / RHO0
+    v_stall = vstall_kt * KT
+    v_climb = 1.3 * v_stall                                    # safe sea-level climb speed
+    v_lift = 1.1 * v_stall                                     # liftoff speed
+    g_climb = (roc_fpm * FT / 60.0) / v_climb                  # required climb gradient sin(gamma)
+    q_climb = 0.5 * RHO0 * v_climb * v_climb
+    PW = 0.0059648                                             # (W/N) -> (hp/lbf)
+
+    def twc_cruise(ws):
+        return q_cr * cd0 / ws + Kd * beta_cr * beta_cr * ws / q_cr
+    def twc_climb(ws):
+        return q_climb * cd0 / ws + Kd * ws / q_climb + g_climb
+    def twc_takeoff(ws):
+        return 1.21 * ws / (G0 * RHO0 * clmax * (to_roll_ft * FT))
+
+    def to_y(twc, v_cond, sigma_cond, lapse_jet):
+        if is_jet:
+            return twc / lapse_jet                             # installed sea-level T/W
+        return twc * v_cond / (eta_p * sigma_cond) * PW        # installed sea-level P/W [hp/lb]
+
+    def y_cruise(ws):  return to_y(twc_cruise(ws), V, sigma_cr, sigma_cr ** 0.7)
+    def y_climb(ws):   return to_y(twc_climb(ws), v_climb, 1.0, 1.0)
+    def y_takeoff(ws): return to_y(twc_takeoff(ws), v_lift, 1.0, 1.0)
+
+    ws_lo, ws_hi = 0.30 * ws_stall, 1.25 * ws_stall
+    ws_grid = [ws_lo + (ws_hi - ws_lo) * i / 59.0 for i in range(60)]
+    to_lbft2 = NM2_LBFT2
+    yd_cr, yd_cl, yd_to = y_cruise(ws_design), y_climb(ws_design), y_takeoff(ws_design)
+    binding = max(("cruise", yd_cr), ("climb", yd_cl), ("takeoff", yd_to), key=lambda t: t[1])
+    out_constraints = {
+        "mode": "T/W" if is_jet else "P/W",
+        "y_label": "Thrust loading  T/W" if is_jet else "Power loading  P/W (hp/lb)",
+        "ws_lbft2": [round(w * to_lbft2, 3) for w in ws_grid],
+        "cruise": [round(y_cruise(w), 5) for w in ws_grid],
+        "climb": [round(y_climb(w), 5) for w in ws_grid],
+        "takeoff": [round(y_takeoff(w), 5) for w in ws_grid],
+        "stall_ws_lbft2": round(ws_stall * to_lbft2, 2),
+        "design": {"ws": round(ws_design * to_lbft2, 2), "y": round(binding[1], 5), "binding": binding[0],
+                   "cruise": round(yd_cr, 5), "climb": round(yd_cl, 5), "takeoff": round(yd_to, 5)},
+        "maxld_polar": round(maxld_polar, 1), "assumed_ld": round(ld, 1),
+        "cd0": round(cd0, 4), "oswald_e": round(e_osw, 3),
+        "roc_fpm": round(roc_fpm, 0), "takeoff_roll_ft": round(to_roll_ft, 0),
+    }
+
     out = {
         "inputs": {"payload_lb": payload, "crew_lb": crew, "range_nm": rng_nm, "cruise_alt_ft": alt_ft,
                    "cruise_kt": round(V / KT, 1), "mach": round(mach, 3), "prop_type": prop_type,
@@ -161,6 +220,7 @@ def size(params):
             "cruise_thrust_lb": round(thrust_req / (LB * G0), 1),
         },
     }
+    out["constraints"] = out_constraints
     return out
 
 

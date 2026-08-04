@@ -7,6 +7,7 @@
       <li><b>Mission</b> &mdash; what must it do?</li>
       <li><b>Weight sizing</b> &mdash; fuel + empty-weight fractions converge the take-off weight</li>
       <li><b>Wing sizing</b> &mdash; wing loading sets area, span, chords</li>
+      <li><b>Matching diagram</b> &mdash; T/W vs W/S picks the design point + sizes thrust</li>
       <li><b>Closure</b> &mdash; does it actually meet the mission?</li>
     </ol>
     <div class="cd-info-h">Tutorial &rarr; project</div>
@@ -51,7 +52,12 @@
             <option>transport jet</option>
           </select></label>
         <label>Reserve frac <input id="cd-reserve" type="text" value="0.06"></label>
+        <label>Parasite C<sub>D0</sub> <input id="cd-cd0" type="text" value="0.025"></label>
+        <label>Oswald e <input id="cd-e" type="text" value="0.80"></label>
+        <label>Rate of climb <input id="cd-roc" type="text" value="800"> ft/min</label>
+        <label>Takeoff roll <input id="cd-toroll" type="text" value="1500"> ft</label>
       </div>
+      <div id="cd-help-strip" class="cd-help">Hover the (i) icons, or click into a field, to see how to think about each value.</div>
       <div class="cd-actions">
         <button id="cd-example" type="button" class="cd-secondary">Load worked example</button>
         <button id="cd-run" type="button">Size the aircraft</button>
@@ -71,12 +77,18 @@
         <div class="cd-teach">The stall requirement caps wing loading (W/S); with the MTOW that fixes the wing area, and AR + taper give span and chords.</div>
       </div>
       <div class="cd-card">
-        <div class="cd-step">5 &middot; Closure</div>
+        <div class="cd-step">5 &middot; Constraint / matching diagram</div>
+        <canvas id="cd-matching" class="cd-chart"></canvas>
+        <div id="cd-binding" class="cd-table"></div>
+        <div class="cd-teach">This is how you actually <b>pick the design point</b>: every requirement is a curve on <b>thrust loading vs wing loading</b>. Feasible designs sit in the shaded wedge &mdash; <b>left of the stall limit</b> and <b>above every performance curve</b>. The engine is sized by the <b>highest</b> curve at your W/S (the <b>binding constraint</b>) &mdash; watch which one wins as you change the mission. The polar (L/D)<sub>max</sub> is a reality check on your assumed cruise L/D.</div>
+      </div>
+      <div class="cd-card">
+        <div class="cd-step">6 &middot; Closure</div>
         <div id="cd-closure" class="cd-table"></div>
         <div class="cd-teach">Does it meet the mission? Check the stall speed, the cruise lift coefficient, and the power/thrust required.</div>
       </div>
       <div class="cd-card cd-record">
-        <div class="cd-step">6 &middot; Design record</div>
+        <div class="cd-step">7 &middot; Design record</div>
         <div id="cd-record" class="cd-recordbody"></div>
         <div class="cd-actions"><button id="cd-copy" type="button" class="cd-secondary">Copy summary</button></div>
         <div class="cd-teach">Next: open <b>Wing / VLM</b> with this span / AR / taper to analyze lift + stability, and <b>Airfoil Lab</b> to choose a section near the cruise C<sub>L</sub>.</div>
