@@ -27,8 +27,14 @@ Bash) are always available and are handled separately from presets.
 | `HARNESS_CONFIG` | Path to the config JSON | `harness.config.json` next to `server.py` |
 | `HARNESS_PLUGINS_DIR` | Extra directory to discover plugins in | `<core>/plugins` |
 | `HARNESS_LOCAL_MODELS_URL` | Base URL for the Local Models plugin (Ollama / LM Studio) | `http://localhost:11434` |
+| `HARNESS_TAILNET` | `1` opts in to an extra listener on this machine's Tailscale address (see [`SECURITY.md`](SECURITY.md)) | off (loopback only) |
+| `HARNESS_TAILNET_BIND` / `HARNESS_TAILNET_HOST` | Explicit tailnet address / DNS name; setting either also opts in | unset |
+| `HARNESS_NO_TAILNET` | `1` forces the tailnet listener off, overriding the opt-in variables | unset |
 
 ## Access
 
-On start, the server prints a local URL and a session token. The token is required on every request
-(query string or header); requests from disallowed Origins/Hosts are rejected. Keep the token local.
+On start, the server prints a local URL (and whether the optional tailnet listener is on). The UI
+fetches a per-run session token from `/api/config`, which answers only a loopback client or an allowed
+page Origin; every other API call and the terminal WebSocket require that token (query string or
+header). Requests from disallowed Origins/Hosts are rejected. Keep the token local. Details:
+[`SECURITY.md`](SECURITY.md).

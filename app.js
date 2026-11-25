@@ -57,7 +57,9 @@ const XTERM_THEME = {
 document.addEventListener("DOMContentLoaded", async () => {
   setupNavigation();
   try {
-    const res = await apiFetch("/api/config");
+    // POST so the browser attaches Origin even on a same-origin request (the server
+    // hands the token only to a loopback peer or an allowed Origin).
+    const res = await apiFetch("/api/config", { method: "POST" });
     CONFIG = await res.json();
     setServerStatus(true, "Server connected");
   } catch (err) {

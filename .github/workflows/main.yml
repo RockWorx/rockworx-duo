@@ -24,6 +24,8 @@ jobs:
           pip install -r requirements.txt pytest
       - name: PTY backend (real cross-platform PTY round-trip)
         run: pytest test_pty_backend.py -q
+      - name: Network exposure + token hand-out
+        run: pytest test_security.py -q
       - name: Local Models plugin
         working-directory: plugins/local-models
         run: pytest test_backend.py -q
