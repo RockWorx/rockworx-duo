@@ -1,6 +1,9 @@
 # Core dependency (WebSocket bridge for the terminal fan-out).
 websockets>=12
 
+# Project-manifest front matter (projects.py, imported by server.py at startup).
+pyyaml>=6
+
 # Platform PTY backend -- selected at runtime by pty_backend.py:
 pywinpty>=2.0 ; sys_platform == "win32"      # Windows (ConPTY)
 ptyprocess>=0.7 ; sys_platform != "win32"    # macOS / Linux
