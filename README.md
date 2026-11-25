@@ -12,11 +12,11 @@ with file explorer, git, and project panels alongside. Domain features are add-o
 > **Cross-platform:** Windows (ConPTY via `pywinpty`) and macOS + Linux (via `ptyprocess`) -- the PTY
 > backend is selected at runtime, and CI runs the real terminal round-trip on all three (see the badge).
 >
-> **Everything runs locally -- and hardened even so.** The server binds to `127.0.0.1` only, but because a
-> page in another browser tab can still reach a local server, **every request is gated by a per-session
-> token** (printed at startup) **plus Origin/Host checks** -- so a stray or malicious website can't drive
-> your terminals, and the port is bound exclusively so another process can't hijack it. Nothing is sent
-> anywhere except to the agent CLIs you choose to run. See [Security](#security).
+> **Everything runs locally -- and hardened even so.** By default the server binds to `127.0.0.1` only
+> (remote access over Tailscale is opt-in), but because a page in another browser tab can still reach a
+> local server, **every API and terminal call is gated by a per-session token plus Origin/Host checks** --
+> so a stray or malicious website can't drive your terminals, and the port is bound exclusively so another
+> process can't hijack it. Nothing is sent anywhere except to the agent CLIs you choose to run. See [Security](#security).
 
 ---
 
@@ -54,7 +54,7 @@ cp harness.config.example.json harness.config.json   # optional; edit provider p
 python server.py
 ```
 
-The server prints a local URL and an access token, then opens your browser. `HARNESS_NO_BROWSER=1`
+The server prints a local URL, then opens your browser. `HARNESS_NO_BROWSER=1`
 suppresses auto-open; `HARNESS_PROJECT_ROOT` points the file/git/project panels at a folder (defaults to
 the current directory). See [`docs/CONFIG.md`](docs/CONFIG.md) for all settings.
 
@@ -144,9 +144,11 @@ airfoil → wing → whole-aircraft sizing → back to the tools to refine -- as
 RockWorx Duo runs entirely on your machine -- but "local" is not the same as "unprotected," and it is built
 that way on purpose:
 
-- **`127.0.0.1`-only bind** -- the server never listens on a public interface.
-- **Per-session token on every request** -- printed at startup and required by every API and WebSocket
-  call, so another program on your machine can't quietly drive your terminals.
+- **`127.0.0.1`-only bind by default** -- the server never listens on a public interface. Access from
+  another device on your own Tailscale tailnet is **opt-in** (`HARNESS_TAILNET=1`) and off by default.
+- **Per-session token** -- required by every API and WebSocket call. The UI gets it from `/api/config`,
+  which answers only a loopback client or an allowed page Origin; a no-Origin request from another
+  address is refused.
 - **Origin / Host validation (anti-hijacking)** -- a webpage you open in another tab *can* fire requests at
   `localhost`; those are rejected, so a malicious site can't reach your session.
 - **Exclusive port bind** -- the port is claimed outright so another process can't share or hijack it.
