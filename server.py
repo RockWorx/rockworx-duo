@@ -7,8 +7,9 @@ Serves the harness UI plus:
   - Live JSON APIs: /api/config, /api/ls, /api/sessions (GET),
     /api/session + /api/session/kill (POST).
 
-Security posture: binds 127.0.0.1 ONLY, with SO_EXCLUSIVEADDRUSE so another
-process cannot silently hijack the port. There is NO arbitrary-shell endpoint;
+Security posture: binds 127.0.0.1 ONLY by default, with SO_EXCLUSIVEADDRUSE so
+another process cannot silently hijack the port. A Tailscale (tailnet) listener is
+OPT-IN (HARNESS_TAILNET=1); see docs/SECURITY.md. There is NO arbitrary-shell endpoint;
 the only way to run commands is through the visible PTY terminals.
 
 NOTE: PtyProcess.spawn takes an ARGV LIST. Passing a pre-quoted string gets
@@ -19,6 +20,7 @@ Run:  python server.py          (opens browser)
 """
 
 import asyncio
+import ipaddress
 import json
 import mimetypes
 import os
@@ -56,23 +58,41 @@ HTTP_PORTS = hcfg.resolve_ports("HARNESS_HTTP_PORT", [8888, 8889, 8900])
 WS_PORTS = hcfg.resolve_ports("HARNESS_WS_PORT", [8877, 8878, 8879])
 BIND = "127.0.0.1"
 
-# Tailnet exposure. Binds an ADDITIONAL address (this machine's Tailscale IP)
-# ALONGSIDE loopback so a device on the operator's own tailnet (e.g. an iPad) can
-# reach the harness -- WITHOUT dropping the 127.0.0.1 bind and WITHOUT exposing
-# 0.0.0.0 (which a no-Origin curl on an untrusted LAN could use to grab the
-# token). The Origin allow-list (below) then trusts the tailnet page origin; the
-# per-run TOKEN gate is UNCHANGED, so the tailnet remains the trust boundary.
+# Tailnet exposure (OPT-IN, OFF by default). When enabled, binds an ADDITIONAL
+# address (this machine's Tailscale IP) ALONGSIDE loopback so a device on the
+# operator's own tailnet (e.g. a tablet) can reach the harness -- WITHOUT dropping
+# the 127.0.0.1 bind and WITHOUT exposing 0.0.0.0. The Origin allow-list (below)
+# then trusts the tailnet page origin; the per-run TOKEN gate is UNCHANGED, so
+# when enabled the tailnet is the trust boundary.
 #
-# AUTO-DETECTED by default (zero config) via the Tailscale CLI. Precedence:
-#   HARNESS_NO_TAILNET set        -> disabled (loopback only)
-#   HARNESS_TAILNET_BIND/HOST env -> explicit override
-#   else                          -> `tailscale ip -4` + `tailscale status --json`
+# Precedence:
+#   HARNESS_NO_TAILNET set                          -> disabled (loopback only)
+#   none of the opt-in variables below set          -> disabled (loopback only; DEFAULT)
+#   HARNESS_TAILNET=1, HARNESS_TAILNET_BIND or HARNESS_TAILNET_HOST set
+#                                                   -> enabled; an address or name not given
+#                                                      explicitly is found with
+#                                                      `tailscale ip -4` / `tailscale status --json`
 # Falls back to loopback-only if Tailscale is absent/down (graceful).
-def _detect_tailnet():
-    if os.environ.get("HARNESS_NO_TAILNET"):
-        return None, None
-    ip = os.environ.get("HARNESS_TAILNET_BIND") or None
-    host = os.environ.get("HARNESS_TAILNET_HOST") or None
+_TRUTHY = {"1", "true", "yes", "on"}
+
+
+def _tailnet_opted_in(env=None):
+    """True only when the operator explicitly asked for the tailnet listener."""
+    env = os.environ if env is None else env
+    if (env.get("HARNESS_NO_TAILNET") or "").strip():
+        return False
+    if (env.get("HARNESS_TAILNET") or "").strip().lower() in _TRUTHY:
+        return True
+    return bool((env.get("HARNESS_TAILNET_BIND") or "").strip()
+                or (env.get("HARNESS_TAILNET_HOST") or "").strip())
+
+
+def _detect_tailnet(env=None):
+    env = os.environ if env is None else env
+    if not _tailnet_opted_in(env):
+        return None, None   # default: loopback only -- never probe or bind the tailnet
+    ip = (env.get("HARNESS_TAILNET_BIND") or "").strip() or None
+    host = (env.get("HARNESS_TAILNET_HOST") or "").strip() or None
     if ip and host:
         return ip, host
     ts = shutil.which("tailscale") or r"C:\Program Files\Tailscale\tailscale.exe"
@@ -122,11 +142,41 @@ def _allowed_origins():
     return o
 
 
-def _origin_ok(origin):
+# Headers a reverse proxy (e.g. `tailscale serve`) adds when it forwards a remote
+# request to the loopback port. A request carrying any of them is NOT treated as a
+# loopback peer, even though its TCP peer address is 127.0.0.1.
+_FORWARDED_HEADERS = ("Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Real-IP",
+                      "Tailscale-User-Login")
+
+
+def _is_loopback_peer(peer_ip, headers=None):
+    """True only for a request whose TCP peer is this machine (127.0.0.0/8 or ::1)
+    and which was not forwarded by a proxy."""
+    try:
+        addr = ipaddress.ip_address(str(peer_ip or "").split("%")[0])
+    except ValueError:
+        return False
+    mapped = getattr(addr, "ipv4_mapped", None)
+    if mapped is not None:
+        addr = mapped
+    if not addr.is_loopback:
+        return False
+    if headers is not None:
+        for h in _FORWARDED_HEADERS:
+            if headers.get(h):
+                return False
+    return True
+
+
+def _origin_ok(origin, peer_ip=None, headers=None):
     """A cross-origin browser attack always carries a foreign Origin header;
-    reject those. A None Origin (same-origin navigation or a non-browser client
-    that is already the local user) is allowed -- the TOKEN is the hard gate."""
-    return origin is None or origin in _allowed_origins()
+    reject those. A missing Origin (same-origin navigation or a non-browser
+    client) is allowed ONLY from a loopback peer -- the local user. A no-Origin
+    request from any other address is refused, so the session token is never
+    handed to a remote non-browser client."""
+    if origin is None:
+        return _is_loopback_peer(peer_ip, headers)
+    return origin in _allowed_origins()
 
 
 def _token_ok(token):
@@ -533,7 +583,8 @@ async def pty_ws_handler(websocket):
     # cannot present the token -- and its fetch/WS always carries a foreign Origin.
     origin = websocket.request.headers.get("Origin")
     token = (query.get("token") or [""])[0]
-    if not _origin_ok(origin) or not _token_ok(token):
+    peer = (getattr(websocket, "remote_address", None) or (None,))[0]
+    if not _origin_ok(origin, peer, websocket.request.headers) or not _token_ok(token):
         await websocket.close(1008, "unauthorized")
         return
     sid = (query.get("id") or [""])[0]
@@ -1159,8 +1210,19 @@ class HarnessHandler(SimpleHTTPRequestHandler):
         return t
 
     def _gate(self, require_token=True):
-        """True if the request may proceed; else emit 403 and return False."""
-        if not _origin_ok(self.headers.get("Origin")):
+        """True if the request may proceed; else emit 403 and return False.
+
+        require_token=False is the token HAND-OUT path (/api/config): a no-Origin
+        request is answered only for a loopback peer. On token-gated paths a
+        no-Origin request may proceed from any bound address because the valid
+        token (checked next) is the hard gate; a browser on an opted-in tailnet
+        sends same-origin GETs without an Origin header."""
+        origin = self.headers.get("Origin")
+        if require_token:
+            origin_ok = origin is None or origin in _allowed_origins()
+        else:
+            origin_ok = _origin_ok(origin, self.client_address[0], self.headers)
+        if not origin_ok:
             self._send_json({"error": "forbidden origin"}, 403)
             return False
         if require_token and not _token_ok(self._client_token()):
@@ -1263,7 +1325,8 @@ class HarnessHandler(SimpleHTTPRequestHandler):
             self._static_asset = True   # -> no-cache header (see end_headers): edits show on reload
             return super().do_GET()     # static UI assets: same-origin, ungated
         # /api/config HANDS OUT the token, so it cannot require one -- but it is
-        # still Origin-gated so a foreign page cannot read the token out of it.
+        # still gated: a foreign Origin is refused, and a no-Origin request is
+        # answered only for a loopback peer (see _origin_ok).
         if not self._gate(require_token=(parsed.path != "/api/config")):
             return
         try:
@@ -1278,8 +1341,16 @@ class HarnessHandler(SimpleHTTPRequestHandler):
             self._send_json({"error": "forbidden host"}, 403)
             return
         parsed = urlparse(self.path)
-        if not self._gate(require_token=True):
+        # POST /api/config: same token hand-out as GET, same gate. Browsers attach
+        # Origin to a same-origin POST but not to a same-origin GET, so the UI uses
+        # POST -- that lets a tailnet page (opt-in) prove its Origin.
+        if not self._gate(require_token=(parsed.path != "/api/config")):
             return
+        if parsed.path == "/api/config":
+            try:
+                return self._send_json(api_config({}))
+            except Exception as exc:
+                return self._send_json({"error": f"internal: {exc}"}, 500)
         try:
             length = int(self.headers.get("Content-Length", 0))
             payload = json.loads(self.rfile.read(length) or b"{}")
@@ -1347,6 +1418,12 @@ class ExclusiveHTTPServer(ThreadingHTTPServer):
 ACTIVE_WS_PORT = WS_PORTS[0]
 
 
+def bind_hosts():
+    """Addresses the HTTP and WS listeners bind: loopback, plus the tailnet IP only
+    when the operator opted in (TAILNET_BIND is None otherwise)."""
+    return [BIND, TAILNET_BIND] if TAILNET_BIND else [BIND]
+
+
 def start_http():
     global ACTIVE_HTTP_PORT
     for port in HTTP_PORTS:
@@ -1356,9 +1433,9 @@ def start_http():
             continue
         ACTIVE_HTTP_PORT = port   # the origin allow-list is built from this
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
-        if TAILNET_BIND:
+        for extra in bind_hosts()[1:]:
             try:
-                ts_httpd = ExclusiveHTTPServer((TAILNET_BIND, port), HarnessHandler)
+                ts_httpd = ExclusiveHTTPServer((extra, port), HarnessHandler)
                 threading.Thread(target=ts_httpd.serve_forever, daemon=True).start()
                 print(f"  UI(tailnet): http://{TAILNET_BIND}:{port}/index.html", flush=True)
             except OSError as exc:
@@ -1378,7 +1455,8 @@ async def main_async():
     # fails on account of the tailnet opt-in.
     for port in WS_PORTS:
         try:
-            hosts = [BIND, TAILNET_BIND] if TAILNET_BIND else BIND
+            hosts = bind_hosts()
+            hosts = hosts if len(hosts) > 1 else BIND
             ws_server = await ws_serve(pty_ws_handler, hosts, port)
             ACTIVE_WS_PORT = port
             break
@@ -1403,7 +1481,9 @@ async def main_async():
     print(f"  PTY WS:    ws://{BIND}:{ACTIVE_WS_PORT}", flush=True)
     if TAILNET_BIND:
         _tshost = TAILNET_HOST or TAILNET_BIND
-        print(f"  Tailnet:   http://{_tshost}:{http_port}/  (open this on the iPad)", flush=True)
+        print(f"  Tailnet:   http://{_tshost}:{http_port}/  (opt-in; open this on your device)", flush=True)
+    elif not TAILNET_HOST:
+        print("  Tailnet:   off (loopback only; set HARNESS_TAILNET=1 to opt in)", flush=True)
     print(f"  Agents:    {', '.join(AGENT_CMDS)}  (default cwd: {DEFAULT_CWD})",
           flush=True)
     print("=" * 54, flush=True)
